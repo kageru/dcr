@@ -1,6 +1,6 @@
 use nom::{
     branch::alt, character::complete::anychar, combinator::map, multi::many0,
-    number::complete::double, IResult,
+    number::complete::double, IResult, Parser,
 };
 use std::io::stdin;
 
@@ -39,9 +39,10 @@ fn parse(input: &str) -> IResult<&str, Vec<V>> {
             '/' => V::Div,
             _ => unimplemented!(),
         }),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 fn float(input: &str) -> IResult<&str, V> {
-    map(double, V::Value)(input)
+    map(double, V::Value).parse(input)
 }
