@@ -37,4 +37,6 @@ enum V {
     Quit,
     Clear,
     Printall,
+    Store,
+    Load,
 }

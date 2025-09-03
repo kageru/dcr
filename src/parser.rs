@@ -29,6 +29,8 @@ fn op(input: &str) -> IResult<&str, V> {
             '/' => V::Div,
             'p' => V::Print,
             'f' => V::Printall,
+            's' => V::Store,
+            'l' => V::Load,
             'c' => V::Clear,
             'q' => V::Quit,
             _ => Err(format!("Unexpected input char ‘{c}’"))?,
@@ -49,7 +51,7 @@ mod tests {
     #[test]
     fn parse_test() {
         assert_eq!(
-            parse("1 2+3-/*pf").expect("parsing failed").1[..],
+            parse("1 2+3-/*pfcqsl").expect("parsing failed").1[..],
             [
                 Value(1.0),
                 Value(2.0),
@@ -59,7 +61,11 @@ mod tests {
                 Div,
                 Mul,
                 Print,
-                Printall
+                Printall,
+                Clear,
+                Quit,
+                Store,
+                Load,
             ],
         );
         assert_eq!(
