@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     character::complete::{anychar, char, multispace0},
-    combinator::{all_consuming, map},
+    combinator::{all_consuming, map, map_res},
     multi::many0,
     number::complete::double,
     sequence::preceded,
@@ -13,10 +13,17 @@ use V::*;
 fn main() {
     let mut stack = Vec::new();
     for line in stdin().lines().filter_map(|l| l.ok()) {
-        for v in parse(&line).unwrap().1 {
-            if let Err(e) = process(&mut stack, v) {
-                eprintln!("Error at {v:?}: {e} (stack was {stack:?})")
+        match parse(&line) {
+            Ok(("", values)) => {
+                for v in values {
+                    if let Err(e) = process(&mut stack, v) {
+                        eprintln!("Error at {v:?}: {e} (stack was {stack:?})")
+                    }
+                }
             }
+            // Should the valid parts still be executed?
+            Ok((rest, _)) => eprintln!("Input contained unparsable tokens: “{rest}”"),
+            Err(_) => unreachable!(), // it actually is!
         }
     }
 }
@@ -67,7 +74,7 @@ enum V {
 }
 
 fn parse(input: &str) -> IResult<&str, Vec<V>> {
-    all_consuming(many0(alt((add, float, op)))).parse(input)
+    many0(alt((add, float, op))).parse(input)
 }
 
 // Special case with higher precedence than float
@@ -77,16 +84,18 @@ fn add(input: &str) -> IResult<&str, V> {
 }
 
 fn op(input: &str) -> IResult<&str, V> {
-    map(preceded(multispace0, anychar), |c| match c {
-        '+' => V::Add,
-        '-' => V::Sub,
-        '*' => V::Mul,
-        '/' => V::Div,
-        'p' => V::Print,
-        'f' => V::Printall,
-        'c' => V::Clear,
-        'q' => V::Quit,
-        _ => unimplemented!(),
+    map_res(preceded(multispace0, anychar), |c| {
+        Ok::<V, String>(match c {
+            '+' => V::Add,
+            '-' => V::Sub,
+            '*' => V::Mul,
+            '/' => V::Div,
+            'p' => V::Print,
+            'f' => V::Printall,
+            'c' => V::Clear,
+            'q' => V::Quit,
+            _ => Err(format!("Unexpected input char ‘{c}’"))?,
+        })
     })
     .parse(input)
 }
