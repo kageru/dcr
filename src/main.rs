@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     character::complete::{anychar, char, multispace0},
-    combinator::{all_consuming, map, map_res},
+    combinator::{map, map_res},
     multi::many0,
     number::complete::double,
     sequence::preceded,
@@ -45,19 +45,20 @@ fn process(stack: &mut Vec<f64>, v: V) -> Result<(), &'static str> {
 }
 
 fn binop<F: FnOnce(f64, f64) -> f64>(stack: &mut Vec<f64>, f: F) -> Result<(), &'static str> {
-    let (a, b) = pop2(stack)?;
+    let [a, b] = popn(stack)?;
     Ok(stack.push(f(a, b)))
 }
 
-fn pop2(v: &mut Vec<f64>) -> Result<(f64, f64), &'static str> {
+fn popn<const N: usize>(v: &mut Vec<f64>) -> Result<[f64; N], &'static str> {
     // Checking first rather than `pop()?` because we don’t want to pop at all if there aren’t enough values.
-    let (&a, &b) = match v.as_slice() {
-        [.., a, b] => (a, b),
-        _ => return Err(STACK_EMPTY),
-    };
-    v.pop();
-    v.pop();
-    Ok((a, b))
+    if v.len() < N {
+        return Err(STACK_EMPTY);
+    }
+    let mut out = [0.0; N];
+    for i in (0..N).rev() {
+        out[i] = v.pop().unwrap();
+    }
+    Ok(out)
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
