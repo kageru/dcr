@@ -1,6 +1,6 @@
 # dcr – `dc` but in Rust
 Sort of, at least. The goal here isn’t to replace `dc` at all. I just wanted my own RPN calculator.
-I have some lambda calculus ideas, but we’ll see about those.
+I have some stupid ideas, but we’ll see about those.
 
 Currently implemented:
 - `+-/*`: basic math; pop 2 values, push 1

@@ -11,7 +11,7 @@ use nom::{
 use crate::V;
 
 pub fn parse(input: &str) -> IResult<&str, Vec<V>> {
-    many0(alt((add, float, op))).parse(input)
+    many0(preceded(multispace0, alt((add, float, op)))).parse(input)
 }
 
 // Special case with higher precedence than float
@@ -21,7 +21,7 @@ fn add(input: &str) -> IResult<&str, V> {
 }
 
 fn op(input: &str) -> IResult<&str, V> {
-    map_res(preceded(multispace0, anychar), |c| {
+    map_res(anychar, |c| {
         Ok::<V, String>(match c {
             '+' => V::Add,
             '-' => V::Sub,
@@ -40,7 +40,7 @@ fn op(input: &str) -> IResult<&str, V> {
 }
 
 fn float(input: &str) -> IResult<&str, V> {
-    map(preceded(multispace0, double), V::Value).parse(input)
+    map(double, V::Value).parse(input)
 }
 
 #[cfg(test)]
@@ -75,6 +75,10 @@ mod tests {
         assert_eq!(
             parse(".5.5").expect("parsing failed").1[..],
             [Value(0.5), Value(0.5)],
+        );
+        assert_eq!(
+            parse("4 4 +4").expect("parsing failed").1[..],
+            [Value(4.0), Value(4.0), Add, Value(4.0)],
         );
     }
 }
