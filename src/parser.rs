@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     character::complete::{char, multispace0, one_of},
-    combinator::map,
+    combinator::{map, rest, value},
     multi::many0,
     number::complete::double,
     sequence::preceded,
@@ -11,7 +11,21 @@ use nom::{
 use crate::V;
 
 pub fn parse(input: &str) -> IResult<&str, Vec<V>> {
-    many0(preceded(multispace0, alt((add, float, op)))).parse(input)
+    many0(preceded(
+        multispace0,
+        alt((
+            // These produce output
+            map(alt((add, float, op)), Some),
+            // This is discarded
+            comment,
+        )),
+    ))
+    .map(|v| v.into_iter().flatten().collect())
+    .parse(input)
+}
+
+fn comment(input: &str) -> IResult<&str, Option<V>> {
+    value(None, preceded(char('#'), rest)).parse(input)
 }
 
 // Special case with higher precedence than float
@@ -52,6 +66,15 @@ mod tests {
         let (rest, parsed) = parse(s).expect("parsing failed");
         assert_eq!("", rest);
         assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn comment_test() {
+        assert_parses_as("1 2+#gibberish", &[Value(1.0), Value(2.0), Add]);
+        assert_parses_as(
+            "1 2+      #--#+234     more  gibberish",
+            &[Value(1.0), Value(2.0), Add],
+        );
     }
 
     #[test]
