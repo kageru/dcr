@@ -6,16 +6,19 @@ mod machine;
 mod parser;
 
 /// Number type of the machine
-type N = f64;
+type Num = f64;
+
+type Result<T> = std::result::Result<T, String>;
 
 fn main() {
     let mut machine = Machine::new();
-    for line in stdin().lines().map_while(Result::ok) {
+    for line in stdin().lines().map_while(|l| l.ok()) {
         match parse(&line) {
             Ok(("", values)) => {
                 for v in values {
                     if let Err(e) = machine.process(v) {
-                        eprintln!("Error at {v:?}: {e} (stack was {:?})", machine.stack)
+                        eprintln!("Error at {v:?}: {e} (stack was {:?})", machine.stack);
+                        break;
                     }
                 }
             }
@@ -28,7 +31,7 @@ fn main() {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 enum V {
-    Value(N),
+    Value(Num),
     Add,
     Sub,
     Mul,
@@ -39,4 +42,13 @@ enum V {
     Printall,
     Store,
     Load,
+}
+
+impl V {
+    fn number(self) -> Result<Num> {
+        match self {
+            V::Value(v) => Ok(v),
+            _ => Err(format!("Expected numeric value, got {self:?}")),
+        }
+    }
 }
