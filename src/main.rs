@@ -16,7 +16,7 @@ fn main() {
         match parse(&line) {
             Ok(("", values)) => {
                 for v in values {
-                    if let Err(e) = machine.process(v) {
+                    if let Err(e) = machine.process(v.clone()) {
                         eprintln!("Error at {v:?}: {e} (stack was {:?})", machine.stack);
                         break;
                     }
@@ -29,19 +29,25 @@ fn main() {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum V {
     Value(Num),
     Add,
     Sub,
     Mul,
     Div,
+
     Print,
-    Quit,
-    Clear,
     Printall,
+    Quit,
+
+    Clear,
     Store,
     Load,
+
+    Apply,
+    Partial1(Box<V>, Option<Box<V>>),
+    Partial2(Box<V>, Option<Box<V>>, Option<Box<V>>),
 }
 
 impl V {

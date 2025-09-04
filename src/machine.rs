@@ -1,4 +1,4 @@
-use crate::{Num, V, V::*, Result};
+use crate::{Num, Result, V, V::*};
 use std::ops;
 
 const STACK_EMPTY: &str = "not enough elements on the stack";
@@ -19,7 +19,7 @@ impl Machine {
 
     pub fn process(&mut self, v: V) -> Result<()> {
         Ok(match v {
-            v @ Value(_) => self.stack.push(v),
+            v @ (Value(_) | Partial1(_, _) | Partial2(_, _, _)) => self.stack.push(v),
             Add => self.binop(ops::Add::add)?,
             Sub => self.binop(ops::Sub::sub)?,
             Mul => self.binop(ops::Mul::mul)?,
@@ -40,6 +40,7 @@ impl Machine {
             Print => println!("{:?}", self.pop()?),
             Printall => println!("{:?}", self.stack),
             Quit => std::process::exit(0),
+            Partial1(o, None) => self.push(Partial1(o, Some(Box::new(self.pop()?)))),
         })
     }
 
@@ -56,7 +57,7 @@ impl Machine {
         if self.stack.len() < N {
             return Err(STACK_EMPTY.to_owned());
         }
-        let mut out = [Value(0.0); N];
+        let mut out = [const { Value(0.0) }; N];
         for i in (0..N).rev() {
             out[i] = self.stack.pop().unwrap();
         }
@@ -64,7 +65,7 @@ impl Machine {
     }
 
     fn pop(&mut self) -> Result<V> {
-        Ok(self.popn::<1>()?[0])
+        Ok(self.popn::<1>()?[0].clone())
     }
 
     fn push(&mut self, v: V) {
