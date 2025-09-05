@@ -31,23 +31,24 @@ fn main() {
 
 #[derive(Debug, Clone, PartialEq)]
 enum V {
-    Value(Num),
+    // Arithmetic
     Add,
     Sub,
     Mul,
     Div,
-
+    // User interaction
     Print,
     Printall,
     Quit,
-
+    // Stack manipulation
+    Value(Num),
     Clear,
     Store,
     Load,
-
+    // Partial application and function references
     Apply,
-    Partial1(Box<V>, Option<Box<V>>),
-    Partial2(Box<V>, Option<Box<V>>, Option<Box<V>>),
+    Fn(Box<V>),
+    Fn1(Box<V>, Option<Box<V>>),
 }
 
 impl V {

@@ -18,8 +18,30 @@ impl Machine {
     }
 
     pub fn process(&mut self, v: V) -> Result<()> {
+        self.process2::<false>(v)
+    }
+
+    fn process2<const APPLY: bool>(&mut self, v: V) -> Result<()> {
         Ok(match v {
-            v @ (Value(_) | Partial1(_, _) | Partial2(_, _, _)) => self.stack.push(v),
+            v @ Value(_) => self.stack.push(v),
+            v @ (Fn1(_, _) | Fn(_)) if !APPLY => self.stack.push(v),
+
+            Apply => {
+                let o = self.pop()?;
+                self.process2::<true>(o)?
+            }
+            Fn(o) => self.process(*o)?,
+            // Curry the function
+            Fn1(o, None) => {
+                let arg = Box::new(self.pop()?);
+                self.push(Fn1(o, Some(arg)));
+            }
+            // All parameters are here, execute it now
+            Fn1(o, Some(v)) => {
+                self.push(*v);
+                self.process(*o)?;
+            }
+
             Add => self.binop(ops::Add::add)?,
             Sub => self.binop(ops::Sub::sub)?,
             Mul => self.binop(ops::Mul::mul)?,
@@ -40,7 +62,6 @@ impl Machine {
             Print => println!("{:?}", self.pop()?),
             Printall => println!("{:?}", self.stack),
             Quit => std::process::exit(0),
-            Partial1(o, None) => self.push(Partial1(o, Some(Box::new(self.pop()?)))),
         })
     }
 

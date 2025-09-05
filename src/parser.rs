@@ -15,7 +15,7 @@ pub fn parse(input: &str) -> IResult<&str, Vec<V>> {
         multispace0,
         alt((
             // These produce output
-            map(alt((add, float, op)), Some),
+            map(alt((add, float, partial_op, op)), Some),
             // This is discarded
             comment,
         )),
@@ -34,20 +34,52 @@ fn add(input: &str) -> IResult<&str, V> {
     map(char('+'), |_| V::Add).parse(input)
 }
 
-const OPERATORS: &str = "+-*/pfslcq";
+const OP0: &str = "fcq";
+const OP1: &str = "p$";
+const OP2: &str = "+-*/sl";
 
 fn op(input: &str) -> IResult<&str, V> {
-    map(one_of(OPERATORS), |c| match c {
+    alt((op0, op1, op2)).parse(input)
+}
+
+fn partial_op(input: &str) -> IResult<&str, V> {
+    preceded(
+        char('\\'),
+        alt((
+            map(op1, |o| V::Fn(Box::new(o))),
+            map(op2, |o| V::Fn1(Box::new(o), None)),
+        )),
+    )
+    .parse(input)
+}
+
+fn op0(input: &str) -> IResult<&str, V> {
+    map(one_of(OP0), |c| match c {
+        'f' => V::Printall,
+        'c' => V::Clear,
+        'q' => V::Quit,
+        _ => unreachable!(),
+    })
+    .parse(input)
+}
+
+fn op1(input: &str) -> IResult<&str, V> {
+    map(one_of(OP1), |c| match c {
+        'p' => V::Print,
+        '$' => V::Apply,
+        _ => unreachable!(),
+    })
+    .parse(input)
+}
+
+fn op2(input: &str) -> IResult<&str, V> {
+    map(one_of(OP2), |c| match c {
         '+' => V::Add,
         '-' => V::Sub,
         '*' => V::Mul,
         '/' => V::Div,
-        'p' => V::Print,
-        'f' => V::Printall,
         's' => V::Store,
         'l' => V::Load,
-        'c' => V::Clear,
-        'q' => V::Quit,
         _ => unreachable!(),
     })
     .parse(input)
@@ -86,11 +118,17 @@ mod tests {
         );
         assert_parses_as(".5.5", &[Value(0.5), Value(0.5)]);
         assert_parses_as("4 4 +4", &[Value(4.0), Value(4.0), Add, Value(4.0)]);
+        let operators = format!("{OP0}{OP1}{OP2}");
         assert_parses_as(
-            OPERATORS,
+            &operators,
             &[
-                Add, Sub, Mul, Div, Print, Printall, Store, Load, Clear, Quit,
+                Printall, Clear, Quit, Print, Apply, Add, Sub, Mul, Div, Store, Load,
             ],
         );
+    }
+
+    #[test]
+    fn partial_parsing_test() {
+        assert_parses_as("\\++", &[Fn1(Box::new(Add), None), Add]);
     }
 }
