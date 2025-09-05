@@ -34,9 +34,9 @@ fn add(input: &str) -> IResult<&str, V> {
     map(char('+'), |_| V::Add).parse(input)
 }
 
-const OP0: &str = "fcq";
+const OP0: &str = "fcqS";
 const OP1: &str = "p$";
-const OP2: &str = "+-*/sl<";
+const OP2: &str = "+-*/sl<r";
 
 fn op(input: &str) -> IResult<&str, V> {
     alt((op0, op1, op2)).parse(input)
@@ -58,6 +58,7 @@ fn op0(input: &str) -> IResult<&str, V> {
         'f' => V::Printall,
         'c' => V::Clear,
         'q' => V::Quit,
+        'S' => V::Stacksize,
         _ => unreachable!(),
     })
     .parse(input)
@@ -81,6 +82,7 @@ fn op2(input: &str) -> IResult<&str, V> {
         's' => V::Store,
         'l' => V::Load,
         '<' => V::Curry,
+        'r' => V::Repeat,
         _ => unreachable!(),
     })
     .parse(input)
@@ -123,7 +125,8 @@ mod tests {
         assert_parses_as(
             &operators,
             &[
-                Printall, Clear, Quit, Print, Apply, Add, Sub, Mul, Div, Store, Load, Curry,
+                Printall, Clear, Quit, Stacksize, Print, Apply, Add, Sub, Mul, Div, Store, Load,
+                Curry, Repeat,
             ],
         );
     }

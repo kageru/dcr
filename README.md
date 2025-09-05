@@ -2,19 +2,23 @@
 Sort of, at least. The goal here isn’t to replace `dc` at all. I just wanted my own RPN calculator.
 I have some stupid ideas, but we’ll see about those.
 
-Currently implemented:
-- `+-/*`: basic math; pop 2 values, push 1
-- `p`: pop and print 1 item
-- `f`: print the stack without altering anything
-- `c`: clear the stack
-- `s`: pop 2 and store the first argument in a register specified by the second argument
-- `l`: pop 1 argument and push the value of that register
+Currently implemented (`xyz` are placeholders for popped stack values):
+- `x y +`: pushes `x + y`. `-`, `*`, `/` work the same.
+- `x p`: print `x`
+- `f`: print the stack
 - `q`: exit the program
+- `c`: clear the stack
+- `x y s`: store `x` in register `y`
+- `x l`: load the value from register `x` and push it
+- `x y r`: push `x` `y` times. If `x` is a function, it is instead applied `y` times.
+- `\x`: Put an `x` on the stack without executing it. `x` has to be a function that take 1 or more arguments
+- `x y <`: curry `x` (which has to be a function) with `y`
+- `x $`: pop `x` (a function) and apply it. It may pop any number of arguments it requires
 
 FAQ (answers to questions that I thought people might ask; the questions can be inferred by the reader):
-- If an operation takes multiple arguments, the “first” argument is the bottommost on the stack, e.g. `3 1 -` results in a stack containing `2` and `5 0 s` stores the number 5 in register 0, leaving an empty stack.
-- Whitespace is ignored except when it separates 2 numbers.  
-- All numbers are double precision floats.  
-- There are 256 registers, all pre-filled with zeros.  
-- Reading from a register does not clear it.  
-- When used as register addresses, values are rounded if necessary.  
+- Whitespace is ignored except when it separates 2 numbers.
+- All numbers are double precision floats.
+- There are 256 registers, all pre-filled with zeros. They can only contain numbers.
+- Reading from a register does not clear it.
+- When used as register addresses, values are rounded if necessary.
+- Anything after `#` is a comment and will be ignored.

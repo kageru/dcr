@@ -42,7 +42,9 @@ enum V {
     Quit,
     // Stack manipulation
     Value(Num),
+    Stacksize,
     Clear,
+    Repeat,
     Store,
     Load,
     // Partial application and function references
@@ -58,5 +60,9 @@ impl V {
             V::Value(v) => Ok(v),
             _ => Err(format!("Expected numeric value, got {self:?}")),
         }
+    }
+
+    fn int(self) -> Result<usize> {
+        Ok(self.number()?.round() as usize)
     }
 }

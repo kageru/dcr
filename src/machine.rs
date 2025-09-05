@@ -52,13 +52,20 @@ impl Machine {
 
             Store => {
                 let [value, addr] = self.popn()?;
-                let addr = addr.number()?.round() as usize;
+                let addr = addr.int()?;
                 *self.reg(addr)? = value.number()?;
             }
             Load => {
-                let addr = self.pop()?.number()?.round() as usize;
+                let addr = self.pop()?.int()?;
                 let value = *self.reg(addr)?;
                 self.push(Value(value));
+            }
+            Stacksize => self.stack.push(Value(self.stack.len() as f64)),
+            Repeat => {
+                let [v, repetitions] = self.popn()?;
+                for _ in 0..repetitions.int()? {
+                    self.process2::<true>(v.clone())?;
+                }
             }
             Clear => self.stack.clear(),
 
@@ -120,6 +127,8 @@ mod tests {
             ("1 1 \\+ $", vec![Value(2.0)]),
             // partial application
             ("1 \\+ 1 1 + < $", vec![Value(3.0)]),
+            // Calculate the average of [1, 2, 3, 4] using repeat and stack size commands
+            ("1 2 3 4 S0s \\+ S2-r 0l /", vec![Value(2.5)]),
         ] {
             let input = parse(raw).expect("parsing failed").1;
             let mut machine = Machine::new();
