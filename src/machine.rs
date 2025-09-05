@@ -18,6 +18,7 @@ impl Machine {
     }
 
     pub fn process(&mut self, v: V) -> Result<()> {
+        dbg!(&v, &self.stack);
         self.process2::<false>(v)
     }
 
@@ -31,12 +32,14 @@ impl Machine {
                 self.process2::<true>(o)?
             }
             Fn(o) => self.process(*o)?,
-            // Curry the function
-            Fn1(o, None) => {
-                let arg = Box::new(self.pop()?);
-                self.push(Fn1(o, Some(arg)));
+            Curry => {
+                let vals = self.popn()?;
+                let [Fn1(fun, None), arg] = vals else {
+                    return Err(format!("Expected a function and an argument, got {vals:?}"));
+                };
+                self.push(Fn1(fun, Some(Box::new(arg))));
             }
-            // All parameters are here, execute it now
+            Fn1(o, None) => self.process(*o)?,
             Fn1(o, Some(v)) => {
                 self.push(*v);
                 self.process(*o)?;
@@ -103,22 +106,27 @@ impl Machine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::parse;
 
     #[test]
-    fn evaluation_test() {
-        for (input, expectation) in [
+    fn evaluation() {
+        for (raw, expectation) in [
             ("1 2+3-", vec![Value(0.0)]),
             ("40 2+6/7*", vec![Value(49.0)]),
             ("5 2/3+3", vec![Value(5.5), Value(3.0)]),
             ("2 0s0l", vec![Value(2.0)]),
             ("10 0s 20 1s c 1l 1l + 0l -", vec![Value(30.0)]),
+            // delayed application
+            ("1 1 \\+ $", vec![Value(2.0)]),
+            // partial application
+            ("1 \\+ 1 1 + < $", vec![Value(3.0)]),
         ] {
-            let input = crate::parser::parse(input).expect("parsing failed").1;
+            let input = parse(raw).expect("parsing failed").1;
             let mut machine = Machine::new();
             for v in input {
                 machine.process(v).expect("processing failed");
             }
-            assert_eq!(machine.stack, expectation);
+            assert_eq!(machine.stack, expectation, "{raw}");
         }
     }
 }

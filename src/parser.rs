@@ -36,7 +36,7 @@ fn add(input: &str) -> IResult<&str, V> {
 
 const OP0: &str = "fcq";
 const OP1: &str = "p$";
-const OP2: &str = "+-*/sl";
+const OP2: &str = "+-*/sl<";
 
 fn op(input: &str) -> IResult<&str, V> {
     alt((op0, op1, op2)).parse(input)
@@ -80,6 +80,7 @@ fn op2(input: &str) -> IResult<&str, V> {
         '/' => V::Div,
         's' => V::Store,
         'l' => V::Load,
+        '<' => V::Curry,
         _ => unreachable!(),
     })
     .parse(input)
@@ -101,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn comment_test() {
+    fn parse_comment() {
         assert_parses_as("1 2+#gibberish", &[Value(1.0), Value(2.0), Add]);
         assert_parses_as(
             "1 2+      #--#+234     more  gibberish",
@@ -110,7 +111,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_test() {
+    fn parse_expression() {
         assert_parses_as("1 2+3-", &[Value(1.0), Value(2.0), Add, Value(3.0), Sub]);
         assert_parses_as(
             "1 1-2--3",
@@ -122,13 +123,13 @@ mod tests {
         assert_parses_as(
             &operators,
             &[
-                Printall, Clear, Quit, Print, Apply, Add, Sub, Mul, Div, Store, Load,
+                Printall, Clear, Quit, Print, Apply, Add, Sub, Mul, Div, Store, Load, Curry,
             ],
         );
     }
 
     #[test]
-    fn partial_parsing_test() {
+    fn partial_parsing() {
         assert_parses_as("\\++", &[Fn1(Box::new(Add), None), Add]);
     }
 }
