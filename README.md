@@ -8,10 +8,11 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 - `f`: print the stack
 - `q`: exit the program
 - `c`: clear the stack
+- `S`: push the current size of the stack
 - `x y s`: store `x` in register `y`
 - `x l`: load the value from register `x` and push it
 - `x y r`: push `x` `y` times. If `x` is a function, it is instead applied `y` times.
-- `\x`: Put an `x` on the stack without executing it. `x` has to be a function that take 1 or more arguments
+- `\x`: Put an `x` on the stack without executing it. `x` has to be a function that takes 1 or more arguments
 - `x y <`: curry `x` (which has to be a function) with `y`
 - `x $`: pop `x` (a function) and apply it. It may pop any number of arguments it requires
 

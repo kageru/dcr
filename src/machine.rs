@@ -18,7 +18,6 @@ impl Machine {
     }
 
     pub fn process(&mut self, v: V) -> Result<()> {
-        dbg!(&v, &self.stack);
         self.process2::<false>(v)
     }
 
