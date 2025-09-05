@@ -8,6 +8,7 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 - `f`: print the stack
 - `q`: exit the program
 - `c`: clear the stack
+- `S`: push the current size of the stack
 - `x y s`: store `x` in register `y`
 - `x l`: load the value from register `x` and push it
 - `x y r`: push `x` `y` times. If `x` is a function, it is instead applied `y` times.
