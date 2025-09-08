@@ -11,10 +11,10 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 - `S`: push the current size of the stack
 - `x y s`: store `x` in register `y`
 - `x l`: load the value from register `x` and push it
-- `x y r`: push `x` `y` times. If `x` is a function, it is instead applied `y` times.
+- `x y r`: pop x, then push it `y` times. If `x` is a function, it is instead applied `y` times.
 - `\x`: Put an `x` on the stack without executing it. `x` has to be a function that takes 1 or more arguments
-- `x y <`: curry `x` (which has to be a function) with `y`
 - `x $`: pop `x` (a function) and apply it. It may pop any number of arguments it requires
+- `x y $`: curry `x` (a function) with `y` (a value)
 
 FAQ (answers to questions that I thought people might ask; the questions can be inferred by the reader):
 - Whitespace is ignored except when it separates 2 numbers.

@@ -49,7 +49,6 @@ enum V {
     Load,
     // Partial application and function references
     Apply,
-    Curry,
     Fn(Box<V>),
     Fn1(Box<V>, Option<Box<V>>),
 }

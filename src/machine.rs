@@ -26,18 +26,26 @@ impl Machine {
             v @ Value(_) => self.stack.push(v),
             v @ (Fn1(_, _) | Fn(_)) if !APPLY => self.stack.push(v),
 
-            Apply => {
-                let o = self.pop()?;
-                self.process2::<true>(o)?
-            }
+            Apply => match self.pop()? {
+                // Curry the function with this value
+                v @ Value(_) => match self.pop() {
+                    Err(e) => {
+                        self.push(v);
+                        return Err(e);
+                    }
+                    Ok(Fn1(fun, None)) => self.push(Fn1(fun, Some(Box::new(v)))),
+                    Ok(fun) => {
+                        let e =
+                            format!("Expected a function and an argument, got [{fun:?}, {v:?}]");
+                        self.push(fun);
+                        self.push(v);
+                        return Err(e);
+                    }
+                },
+                // Execute the function
+                fun => self.process2::<true>(fun)?,
+            },
             Fn(o) => self.process(*o)?,
-            Curry => {
-                let vals = self.popn()?;
-                let [Fn1(fun, None), arg] = vals else {
-                    return Err(format!("Expected a function and an argument, got {vals:?}"));
-                };
-                self.push(Fn1(fun, Some(Box::new(arg))));
-            }
             Fn1(o, None) => self.process(*o)?,
             Fn1(o, Some(v)) => {
                 self.push(*v);
@@ -125,7 +133,11 @@ mod tests {
             // delayed application
             ("1 1 \\+ $", vec![Value(2.0)]),
             // partial application
-            ("1 \\+ 1 1 + < $", vec![Value(3.0)]),
+            ("1 \\+ 1 1 + $ $", vec![Value(3.0)]),
+            (
+                "1 \\+ 2 $",
+                vec![Value(1.0), Fn1(Box::new(Add), Some(Box::new(Value(2.0))))],
+            ),
             // Calculate the average of [1, 2, 3, 4] using repeat and stack size commands
             ("1 2 3 4 S0s \\+ S2-r 0l /", vec![Value(2.5)]),
         ] {

@@ -36,7 +36,7 @@ fn add(input: &str) -> IResult<&str, V> {
 
 const OP0: &str = "fcqS";
 const OP1: &str = "p$";
-const OP2: &str = "+-*/sl<r";
+const OP2: &str = "+-*/slr";
 
 fn op(input: &str) -> IResult<&str, V> {
     alt((op0, op1, op2)).parse(input)
@@ -81,7 +81,6 @@ fn op2(input: &str) -> IResult<&str, V> {
         '/' => V::Div,
         's' => V::Store,
         'l' => V::Load,
-        '<' => V::Curry,
         'r' => V::Repeat,
         _ => unreachable!(),
     })
@@ -126,7 +125,7 @@ mod tests {
             &operators,
             &[
                 Printall, Clear, Quit, Stacksize, Print, Apply, Add, Sub, Mul, Div, Store, Load,
-                Curry, Repeat,
+                Repeat,
             ],
         );
     }
