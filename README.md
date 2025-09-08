@@ -4,6 +4,8 @@ I have some stupid ideas, but we’ll see about those.
 
 Currently implemented (`xyz` are placeholders for popped stack values):
 - `x y +`: pushes `x + y`. `-`, `*`, `/` work the same.
+- `x y <`: pushes `1` if `x < y`, else pushes `0`. `>` and `=` work the same.
+- `x y z ?`: if `z` is a nonzero value, push x, else push y
 - `x p`: print `x`
 - `f`: print the stack
 - `q`: exit the program

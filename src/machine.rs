@@ -4,6 +4,10 @@ use std::ops;
 const STACK_EMPTY: &str = "not enough elements on the stack";
 const NUM_REGISTERS: usize = 256;
 
+// I’m not a fan, but side effect of using floats for everything
+const TRUE: f64 = 1.0;
+const FALSE: f64 = 0.0;
+
 pub struct Machine {
     pub stack: Vec<V>,
     registers: [Num; NUM_REGISTERS],
@@ -81,9 +85,18 @@ impl Machine {
                     self.process2::<true>(v.clone())?;
                 }
             }
-            Conditional => {
-                unimplemented!()
-            }
+            LessThan => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a < b)))),
+            GreaterThan => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a > b)))),
+            Equal => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a == b)))),
+            Conditional => pop!(self, [a, b, Value(condition)] => {
+                self.push(
+                    if condition == FALSE {
+                        b
+                    } else {
+                        a
+                    }
+                )
+            }),
             Clear => self.stack.clear(),
 
             Print => println!("{:?}", self.pop()?),
@@ -147,6 +160,13 @@ mod tests {
             ),
             // Calculate the average of [1, 2, 3, 4] using repeat and stack size commands
             ("1 2 3 4 S0s \\+ S2-r 0l /", vec![Value(2.5)]),
+            // Select the greater of 2 values
+            ("2 4 2 4 >?", vec![Value(4.0)]),
+            // Select the smaller of 2 values
+            ("2 4 2 4 <?", vec![Value(2.0)]),
+            // Are 2 values the same?
+            ("2 2 =", vec![Value(TRUE)]),
+            ("2 4 =", vec![Value(FALSE)]),
         ] {
             let input = parse(raw).expect("parsing failed").1;
             let mut machine = Machine::new();

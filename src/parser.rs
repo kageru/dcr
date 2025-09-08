@@ -1,11 +1,11 @@
 use nom::{
+    IResult, Parser,
     branch::alt,
     character::complete::{char, multispace0, one_of},
     combinator::{map, rest, value},
     multi::many0,
     number::complete::double,
     sequence::preceded,
-    IResult, Parser,
 };
 
 use crate::V;
@@ -36,7 +36,7 @@ fn add(input: &str) -> IResult<&str, V> {
 
 const OP0: &str = "fcqS";
 const OP1: &str = "p$";
-const OP2: &str = "+-*/slr";
+const OP2: &str = "+-*/slr<>=";
 const OP3: &str = "?";
 
 fn op(input: &str) -> IResult<&str, V> {
@@ -83,6 +83,9 @@ fn op2(input: &str) -> IResult<&str, V> {
         's' => V::Store,
         'l' => V::Load,
         'r' => V::Repeat,
+        '<' => V::LessThan,
+        '>' => V::GreaterThan,
+        '=' => V::Equal,
         _ => unreachable!(),
     })
     .parse(input)
@@ -146,6 +149,9 @@ mod tests {
                 Store,
                 Load,
                 Repeat,
+                LessThan,
+                GreaterThan,
+                Equal,
                 Conditional,
             ],
         );
