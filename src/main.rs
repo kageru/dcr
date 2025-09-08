@@ -51,6 +51,7 @@ enum V {
     Apply,
     Fn(Box<V>),
     Fn1(Box<V>, Option<Box<V>>),
+    Conditional,
 }
 
 impl V {

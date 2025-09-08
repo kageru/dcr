@@ -37,9 +37,10 @@ fn add(input: &str) -> IResult<&str, V> {
 const OP0: &str = "fcqS";
 const OP1: &str = "p$";
 const OP2: &str = "+-*/slr";
+const OP3: &str = "?";
 
 fn op(input: &str) -> IResult<&str, V> {
-    alt((op0, op1, op2)).parse(input)
+    alt((op0, op1, op2, op3)).parse(input)
 }
 
 fn partial_op(input: &str) -> IResult<&str, V> {
@@ -87,6 +88,14 @@ fn op2(input: &str) -> IResult<&str, V> {
     .parse(input)
 }
 
+fn op3(input: &str) -> IResult<&str, V> {
+    map(one_of(OP3), |c| match c {
+        '?' => V::Conditional,
+        _ => unreachable!(),
+    })
+    .parse(input)
+}
+
 fn float(input: &str) -> IResult<&str, V> {
     map(double, V::Value).parse(input)
 }
@@ -120,12 +129,24 @@ mod tests {
         );
         assert_parses_as(".5.5", &[Value(0.5), Value(0.5)]);
         assert_parses_as("4 4 +4", &[Value(4.0), Value(4.0), Add, Value(4.0)]);
-        let operators = format!("{OP0}{OP1}{OP2}");
+        let operators = format!("{OP0}{OP1}{OP2}{OP3}");
         assert_parses_as(
             &operators,
             &[
-                Printall, Clear, Quit, Stacksize, Print, Apply, Add, Sub, Mul, Div, Store, Load,
+                Printall,
+                Clear,
+                Quit,
+                Stacksize,
+                Print,
+                Apply,
+                Add,
+                Sub,
+                Mul,
+                Div,
+                Store,
+                Load,
                 Repeat,
+                Conditional,
             ],
         );
     }

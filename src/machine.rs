@@ -9,6 +9,20 @@ pub struct Machine {
     registers: [Num; NUM_REGISTERS],
 }
 
+macro_rules! pop {
+    ($machine:ident, $pattern:pat => $f:expr) => {{
+        let vals = $machine.popn()?;
+        let $pattern = vals else {
+            let e = format!("Expected parameters, got {vals:?}");
+            for val in vals {
+                $machine.push(val);
+            }
+            return Err(e);
+        };
+        $f
+    }};
+}
+
 impl Machine {
     pub fn new() -> Self {
         Self {
@@ -21,29 +35,22 @@ impl Machine {
         self.process2::<false>(v)
     }
 
+    fn try_curry(&mut self) -> Result<V> {
+        pop!(self, [Fn1(fun, None), v @ Value(_)] => Ok(Fn1(fun, Some(Box::new(v)))))
+    }
+
     fn process2<const APPLY: bool>(&mut self, v: V) -> Result<()> {
         Ok(match v {
             v @ Value(_) => self.stack.push(v),
             v @ (Fn1(_, _) | Fn(_)) if !APPLY => self.stack.push(v),
 
-            Apply => match self.pop()? {
-                // Curry the function with this value
-                v @ Value(_) => match self.pop() {
-                    Err(e) => {
-                        self.push(v);
-                        return Err(e);
-                    }
-                    Ok(Fn1(fun, None)) => self.push(Fn1(fun, Some(Box::new(v)))),
-                    Ok(fun) => {
-                        let e =
-                            format!("Expected a function and an argument, got [{fun:?}, {v:?}]");
-                        self.push(fun);
-                        self.push(v);
-                        return Err(e);
-                    }
-                },
-                // Execute the function
-                fun => self.process2::<true>(fun)?,
+            Apply => match self.try_curry() {
+                Ok(f) => self.push(f),
+                // The arguments aren’t a value and a partial, so we just try to execute whatever is on the stack
+                Err(_) => {
+                    let next = self.pop()?;
+                    self.process2::<true>(next)?
+                }
             },
             Fn(o) => self.process(*o)?,
             Fn1(o, None) => self.process(*o)?,
@@ -74,6 +81,9 @@ impl Machine {
                     self.process2::<true>(v.clone())?;
                 }
             }
+            Conditional => {
+                unimplemented!()
+            }
             Clear => self.stack.clear(),
 
             Print => println!("{:?}", self.pop()?),
@@ -83,11 +93,7 @@ impl Machine {
     }
 
     fn binop<F: FnOnce(Num, Num) -> Num>(&mut self, f: F) -> Result<()> {
-        let vals = self.popn()?;
-        let [Value(a), Value(b)] = vals else {
-            return Err(format!("Expected 2 numeric values, got {vals:?}"));
-        };
-        Ok(self.stack.push(Value(f(a, b))))
+        pop!(self, [Value(a), Value(b)] => Ok(self.stack.push(Value(f(a, b)))))
     }
 
     fn popn<const N: usize>(&mut self) -> Result<[V; N]> {
@@ -103,7 +109,8 @@ impl Machine {
     }
 
     fn pop(&mut self) -> Result<V> {
-        Ok(self.popn::<1>()?[0].clone())
+        let [v] = self.popn()?;
+        Ok(v)
     }
 
     fn push(&mut self, v: V) {
