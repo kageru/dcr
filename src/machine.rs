@@ -1,5 +1,5 @@
 use crate::{Num, Result, V, V::*};
-use std::ops;
+use std::{collections::HashMap, ops};
 
 const STACK_EMPTY: &str = "not enough elements on the stack";
 const NUM_REGISTERS: usize = 256;
@@ -11,6 +11,7 @@ const FALSE: f64 = 0.0;
 pub struct Machine {
     pub stack: Vec<V>,
     registers: [Num; NUM_REGISTERS],
+    vars: HashMap<String, V>,
 }
 
 macro_rules! pop {
@@ -32,6 +33,7 @@ impl Machine {
         Self {
             stack: Vec::new(),
             registers: [0.0; _],
+            vars: HashMap::new(),
         }
     }
 
@@ -46,7 +48,7 @@ impl Machine {
     fn process2<const APPLY: bool>(&mut self, v: V) -> Result<()> {
         Ok(match v {
             v @ Value(_) => self.stack.push(v),
-            v @ (Fn1(_, _) | Fn(_)) if !APPLY => self.stack.push(v),
+            v @ (Fn1(_, _) | Fn(_) | Identifier(_)) if !APPLY => self.stack.push(v),
 
             Apply => match self.try_curry() {
                 Ok(f) => self.push(f),
@@ -55,6 +57,10 @@ impl Machine {
                     let next = self.pop()?;
                     self.process2::<true>(next)?
                 }
+            },
+            Identifier(ident) => match self.vars.get(&ident).cloned() {
+                Some(v) => self.process2::<true>(v)?,
+                None => return Err(format!("{ident} not found")),
             },
             Fn(o) => self.process(*o)?,
             Fn1(o, None) => self.process(*o)?,
@@ -70,13 +76,25 @@ impl Machine {
 
             Store => {
                 let [value, addr] = self.popn()?;
-                let addr = addr.int()?;
-                *self.reg(addr)? = value.number()?;
+                if let Identifier(ident) = addr {
+                    self.vars.insert(ident, value);
+                } else {
+                    let addr = addr.int()?;
+                    *self.reg(addr)? = value.number()?;
+                }
             }
             Load => {
-                let addr = self.pop()?.int()?;
-                let value = *self.reg(addr)?;
-                self.push(Value(value));
+                let addr = self.pop()?;
+                let v = if let Identifier(ident) = addr {
+                    self.vars
+                        .get(&ident)
+                        .cloned()
+                        .ok_or_else(|| format!("{ident} not found"))?
+                } else {
+                    let addr = addr.int()?;
+                    Value(*self.reg(addr)?)
+                };
+                self.push(v);
             }
             Stacksize => self.stack.push(Value(self.stack.len() as f64)),
             Repeat => {
@@ -141,39 +159,33 @@ impl Machine {
 mod tests {
     use super::*;
     use crate::parser::parse;
+    use test_case::test_case;
 
-    #[test]
-    fn evaluation() {
-        for (raw, expectation) in [
-            ("1 2+3-", vec![Value(0.0)]),
-            ("40 2+6/7*", vec![Value(49.0)]),
-            ("5 2/3+3", vec![Value(5.5), Value(3.0)]),
-            ("2 0s0l", vec![Value(2.0)]),
-            ("10 0s 20 1s c 1l 1l + 0l -", vec![Value(30.0)]),
-            // delayed application
-            ("1 1 \\+ $", vec![Value(2.0)]),
-            // partial application
-            ("1 \\+ 1 1 + $ $", vec![Value(3.0)]),
-            (
-                "1 \\+ 2 $",
-                vec![Value(1.0), Fn1(Box::new(Add), Some(Box::new(Value(2.0))))],
-            ),
-            // Calculate the average of [1, 2, 3, 4] using repeat and stack size commands
-            ("1 2 3 4 S0s \\+ S2-r 0l /", vec![Value(2.5)]),
-            // Select the greater of 2 values
-            ("2 4 2 4 >?", vec![Value(4.0)]),
-            // Select the smaller of 2 values
-            ("2 4 2 4 <?", vec![Value(2.0)]),
-            // Are 2 values the same?
-            ("2 2 =", vec![Value(TRUE)]),
-            ("2 4 =", vec![Value(FALSE)]),
-        ] {
-            let input = parse(raw).expect("parsing failed").1;
-            let mut machine = Machine::new();
-            for v in input {
-                machine.process(v).expect("processing failed");
-            }
-            assert_eq!(machine.stack, expectation, "{raw}");
+    #[test_case("1 2+3-" => vec![Value(0.0)])]
+    #[test_case("40 2+6/7*" => vec![Value(49.0)])]
+    #[test_case("5 2/3+3" => vec![Value(5.5), Value(3.0)])]
+    #[test_case("2 0s0l" => vec![Value(2.0)]; "storing a number in a register")]
+    #[test_case("10 0s 20 1s c 1l 1l + 0l -" => vec![Value(30.0)])]
+    #[test_case(r"1 1 \+ $" => vec![Value(2.0)]; "delayed application")]
+    #[test_case(r"1 \+ 1 1 + $ $" => vec![Value(3.0)]; "partial application")]
+    #[test_case(r"1 \+ 2 $" => vec![Value(1.0), Fn1(Box::new(Add), Some(Box::new(Value(2.0))))])]
+    #[test_case(r"1 2 3 4 S0s \+ S2-r 0l /" => vec![Value(2.5)]; "calculate the average using repeat and stack size")]
+    #[test_case("2 4 2 4 >?" => vec![Value(4.0)]; "max()")]
+    #[test_case("2 4 2 4 <?" => vec![Value(2.0)]; "min()")]
+    #[test_case("2 2 =" => vec![Value(TRUE)]; "equality")]
+    #[test_case("2 4 =" => vec![Value(FALSE)]; "inequality")]
+    #[test_case("2 (two) s c (two) l" => vec![Value(2.0)]; "storing a number in a named variable")]
+    #[test_case(r"\- (minus) s c (minus) l" => vec![Fn1(Box::new(Sub), None)]; "storing a function in a named variable")]
+    #[test_case(r"\- (minus) s 2 1 (minus) $" => vec![Value(1.0)]; "applying a function from a named variable")]
+    fn evaluation(raw: &str) -> Vec<V> {
+        let input = parse(raw).expect("parsing failed").1;
+        dbg!(raw, &input);
+        let mut machine = Machine::new();
+        for v in input {
+            dbg!(&v);
+            machine.process(v).expect("processing failed");
+            dbg!(&machine.stack);
         }
+        machine.stack
     }
 }

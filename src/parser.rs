@@ -1,11 +1,11 @@
 use nom::{
-    IResult, Parser,
     branch::alt,
-    character::complete::{char, multispace0, one_of},
+    character::complete::{alphanumeric1, char, multispace0, one_of},
     combinator::{map, rest, value},
     multi::many0,
     number::complete::double,
-    sequence::preceded,
+    sequence::{delimited, preceded},
+    IResult, Parser,
 };
 
 use crate::V;
@@ -15,23 +15,30 @@ pub fn parse(input: &str) -> IResult<&str, Vec<V>> {
         multispace0,
         alt((
             // These produce output
-            map(alt((add, float, partial_op, op)), Some),
+            map(alt((add, float, partial_op, op, identifier)), Some),
             // This is discarded
-            comment,
+            value(None, comment),
         )),
     ))
     .map(|v| v.into_iter().flatten().collect())
     .parse(input)
 }
 
-fn comment(input: &str) -> IResult<&str, Option<V>> {
-    value(None, preceded(char('#'), rest)).parse(input)
+fn identifier(input: &str) -> IResult<&str, V> {
+    map(delimited(char('('), alphanumeric1, char(')')), |s: &str| {
+        V::Identifier(s.to_owned())
+    })
+    .parse(input)
+}
+
+fn comment(input: &str) -> IResult<&str, &str> {
+    preceded(char('#'), rest).parse(input)
 }
 
 // Special case with higher precedence than float
 // because the float parser allows a leading `+` which we don’t want.
 fn add(input: &str) -> IResult<&str, V> {
-    map(char('+'), |_| V::Add).parse(input)
+    value(V::Add, char('+')).parse(input)
 }
 
 const OP0: &str = "fcqS";
@@ -158,7 +165,16 @@ mod tests {
     }
 
     #[test]
+    fn parse_identifiers() {
+        assert_parses_as(
+            "(asd)(sdf2)",
+            &[Identifier("asd".to_owned()), Identifier("sdf2".to_owned())],
+        );
+    }
+
+    #[test]
     fn partial_parsing() {
         assert_parses_as("\\++", &[Fn1(Box::new(Add), None), Add]);
+        assert_parses_as("\\-", &[Fn1(Box::new(Sub), None)]);
     }
 }

@@ -51,6 +51,7 @@ enum V {
     Apply,
     Fn(Box<V>),
     Fn1(Box<V>, Option<Box<V>>),
+    Identifier(String),
     // Logic and control flow
     LessThan,
     GreaterThan,
