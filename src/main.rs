@@ -1,3 +1,4 @@
+#![feature(try_blocks)]
 use machine::Machine;
 use parser::parse;
 use std::io::stdin;
@@ -51,6 +52,7 @@ enum V {
     Apply,
     Fn(Box<V>),
     Fn1(Box<V>, Option<Box<V>>),
+    Fn2(Box<V>, Option<Box<V>>, Option<Box<V>>),
     Identifier(String),
     // Logic and control flow
     LessThan,

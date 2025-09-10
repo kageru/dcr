@@ -4,10 +4,6 @@ use std::{collections::HashMap, ops};
 const STACK_EMPTY: &str = "not enough elements on the stack";
 const NUM_REGISTERS: usize = 256;
 
-// I’m not a fan, but side effect of using floats for everything
-const TRUE: f64 = 1.0;
-const FALSE: f64 = 0.0;
-
 pub struct Machine {
     pub stack: Vec<V>,
     registers: [Num; NUM_REGISTERS],
@@ -42,13 +38,23 @@ impl Machine {
     }
 
     fn try_curry(&mut self) -> Result<V> {
-        pop!(self, [Fn1(fun, None), v @ Value(_)] => Ok(Fn1(fun, Some(Box::new(v)))))
+        match self.popn()? {
+            [Fn1(f, None), v @ Value(_)] => Ok(Fn1(f, Some(Box::new(v)))),
+            [Fn2(f, None, a2), v @ Value(_)] => Ok(Fn2(f, Some(Box::new(v)), a2)),
+            [Fn2(f, a1, None), v @ Value(_)] => Ok(Fn2(f, a1, Some(Box::new(v)))),
+            // Put everything back where it belongs
+            [a, b] => {
+                self.push(a);
+                self.push(b);
+                Err(String::new())
+            }
+        }
     }
 
     fn process2<const APPLY: bool>(&mut self, v: V) -> Result<()> {
         Ok(match v {
             v @ Value(_) => self.stack.push(v),
-            v @ (Fn1(_, _) | Fn(_) | Identifier(_)) if !APPLY => self.stack.push(v),
+            v @ (Fn1(_, _) | Fn2(_, _, _) | Fn(_) | Identifier(_)) if !APPLY => self.stack.push(v),
 
             Apply => match self.try_curry() {
                 Ok(f) => self.push(f),
@@ -63,9 +69,25 @@ impl Machine {
                 None => return Err(format!("{ident} not found")),
             },
             Fn(o) => self.process(*o)?,
-            Fn1(o, None) => self.process(*o)?,
-            Fn1(o, Some(v)) => {
-                self.push(*v);
+            // We have to reorder the arguments here because functions are curried starting with the first parameter.
+            // The value on the stack under the reference should therefore be the *last* parameter, after the curried ones.
+            Fn1(o, arg) => {
+                if let Some(v) = arg {
+                    let t = self.pop()?;
+                    self.push(*v);
+                    self.push(t);
+                }
+                self.process(*o)?;
+            }
+            Fn2(o, arg2, arg1) => {
+                let t = self.pop()?;
+                if let Some(v) = arg1 {
+                    self.push(*v);
+                }
+                if let Some(v) = arg2 {
+                    self.push(*v);
+                }
+                self.push(t);
                 self.process(*o)?;
             }
 
@@ -106,9 +128,9 @@ impl Machine {
             LessThan => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a < b)))),
             GreaterThan => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a > b)))),
             Equal => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a == b)))),
-            Conditional => pop!(self, [a, b, Value(condition)] => {
+            Conditional => pop!(self, [Value(condition), a, b] => {
                 self.push(
-                    if condition == FALSE {
+                    if condition == 0.0 {
                         b
                     } else {
                         a
@@ -172,11 +194,12 @@ mod tests {
     #[test_case(r"1 2 3 4 S0s \+ S2-r 0l /" => vec![Value(2.5)]; "calculate the average using repeat and stack size")]
     #[test_case("2 4 2 4 >?" => vec![Value(4.0)]; "max()")]
     #[test_case("2 4 2 4 <?" => vec![Value(2.0)]; "min()")]
-    #[test_case("2 2 =" => vec![Value(TRUE)]; "equality")]
-    #[test_case("2 4 =" => vec![Value(FALSE)]; "inequality")]
+    #[test_case("2 2 =" => vec![Value(1.0)]; "equality")]
+    #[test_case("2 4 =" => vec![Value(0.0)]; "inequality")]
     #[test_case("2 (two) s c (two) l" => vec![Value(2.0)]; "storing a number in a named variable")]
     #[test_case(r"\- (minus) s c (minus) l" => vec![Fn1(Box::new(Sub), None)]; "storing a function in a named variable")]
     #[test_case(r"\- (minus) s 2 1 (minus) $" => vec![Value(1.0)]; "applying a function from a named variable")]
+    #[test_case(r"\? 1$ -1$ (positiveIfTrue)sc 5 (positiveIfTrue)$" => vec![Value(1.0)]; "curried ternary operator")]
     fn evaluation(raw: &str) -> Vec<V> {
         let input = parse(raw).expect("parsing failed").1;
         dbg!(raw, &input);

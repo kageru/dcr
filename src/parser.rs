@@ -56,6 +56,7 @@ fn partial_op(input: &str) -> IResult<&str, V> {
         alt((
             map(op1, |o| V::Fn(Box::new(o))),
             map(op2, |o| V::Fn1(Box::new(o), None)),
+            map(op3, |o| V::Fn2(Box::new(o), None, None)),
         )),
     )
     .parse(input)
