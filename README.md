@@ -5,7 +5,7 @@ I have some stupid ideas, but we’ll see about those.
 Currently implemented (`xyz` are placeholders for popped stack values):
 - `x y +`: pushes `x + y`. `-`, `*`, `/` work the same.
 - `x y <`: pushes `1` if `x < y`, else pushes `0`. `>` and `=` work the same.
-- `x y z ?`: if `z` is a nonzero value, push x, else push y
+- `x y z ?`: if `x` is a nonzero value, push y, else push z
 - `x p`: print `x`
 - `f`: print the stack
 - `q`: exit the program
@@ -16,7 +16,7 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 - `x y r`: pop x, then push it `y` times. If `x` is a function, it is instead applied `y` times.
 - `\x`: Put an `x` on the stack without executing it. `x` has to be a function that takes 1 or more arguments
 - `x $`: pop `x` (a function) and apply it. It may pop any number of arguments it requires
-- `x y $`: curry `x` (a function) with `y` (a value). Currying starts from the *first* argument, so the order is inverse to regular application.
+- `x y $`: curry `x` (a function) with `y` (a value). Currying starts from the last argument, so the order is consistent with regular application.
 
 FAQ (answers to questions that I thought people might ask; the questions can be inferred by the reader):
 - Whitespace is ignored except when it separates 2 numbers.

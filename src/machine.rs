@@ -40,8 +40,8 @@ impl Machine {
     fn try_curry(&mut self) -> Result<V> {
         match self.popn()? {
             [Fn1(f, None), v @ Value(_)] => Ok(Fn1(f, Some(Box::new(v)))),
-            [Fn2(f, None, a2), v @ Value(_)] => Ok(Fn2(f, Some(Box::new(v)), a2)),
             [Fn2(f, a1, None), v @ Value(_)] => Ok(Fn2(f, a1, Some(Box::new(v)))),
+            [Fn2(f, None, a2), v @ Value(_)] => Ok(Fn2(f, Some(Box::new(v)), a2)),
             // Put everything back where it belongs
             [a, b] => {
                 self.push(a);
@@ -79,7 +79,7 @@ impl Machine {
                 }
                 self.process(*o)?;
             }
-            Fn2(o, arg2, arg1) => {
+            Fn2(o, arg1, arg2) => {
                 let t = self.pop()?;
                 if let Some(v) = arg1 {
                     self.push(*v);
@@ -192,8 +192,8 @@ mod tests {
     #[test_case(r"1 \+ 1 1 + $ $" => vec![Value(3.0)]; "partial application")]
     #[test_case(r"1 \+ 2 $" => vec![Value(1.0), Fn1(Box::new(Add), Some(Box::new(Value(2.0))))])]
     #[test_case(r"1 2 3 4 S0s \+ S2-r 0l /" => vec![Value(2.5)]; "calculate the average using repeat and stack size")]
-    #[test_case("2 4 2 4 >?" => vec![Value(4.0)]; "max()")]
-    #[test_case("2 4 2 4 <?" => vec![Value(2.0)]; "min()")]
+    #[test_case("2 4 > 2 4 ?" => vec![Value(4.0)]; "max()")]
+    #[test_case("2 4 < 2 4 ?" => vec![Value(2.0)]; "min()")]
     #[test_case("2 2 =" => vec![Value(1.0)]; "equality")]
     #[test_case("2 4 =" => vec![Value(0.0)]; "inequality")]
     #[test_case("2 (two) s c (two) l" => vec![Value(2.0)]; "storing a number in a named variable")]
