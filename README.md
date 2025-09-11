@@ -13,15 +13,17 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 - `S`: push the current size of the stack
 - `x y s`: store `x` in register `y`
 - `x l`: load the value from register `x` and push it
+- `(asdf)`: put the identifier `asdf` on the stack. It can be used to store functions/values with `s` or load/apply them.
 - `x y r`: pop x, then push it `y` times. If `x` is a function, it is instead applied `y` times.
 - `\x`: Put an `x` on the stack without executing it. `x` has to be a function that takes 1 or more arguments
 - `x $`: pop `x` (a function) and apply it. It may pop any number of arguments it requires
-- `x y $`: curry `x` (a function) with `y` (a value). Currying starts from the last argument, so the order is consistent with regular application.
+- `x y @`: curry `x` (a function) with `y` (still looking for a better operator than `@`). Currying starts from the last argument, so the order is consistent with regular application. e.g. `\/ 2 @` creates a partial that will divide its argument by 2.
+- `x y |`: compose two functions, mainly useful when you want to store the result. When applying `a x y | $`, the result is identical to `x a y $ $`, i.e. `x(y(a))`.
 
 FAQ (answers to questions that I thought people might ask; the questions can be inferred by the reader):
 - Whitespace is ignored except when it separates 2 numbers.
 - All numbers are double precision floats.
-- There are 256 registers, all pre-filled with zeros. They can only contain numbers.
+- There are 256 registers (0-255), all pre-filled with zeros. They can only contain numbers.
 - Reading from a register does not clear it.
 - When used as register addresses, values are rounded if necessary.
 - Anything after `#` is a comment and will be ignored.

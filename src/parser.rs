@@ -43,7 +43,7 @@ fn add(input: &str) -> IResult<&str, V> {
 
 const OP0: &str = "fcqS";
 const OP1: &str = "p$";
-const OP2: &str = "+-*/slr<>=";
+const OP2: &str = "+-*/slr<>=|@";
 const OP3: &str = "?";
 
 fn op(input: &str) -> IResult<&str, V> {
@@ -94,6 +94,8 @@ fn op2(input: &str) -> IResult<&str, V> {
         '<' => V::LessThan,
         '>' => V::GreaterThan,
         '=' => V::Equal,
+        '|' => V::Compose,
+        '@' => V::Curry,
         _ => unreachable!(),
     })
     .parse(input)
@@ -160,6 +162,8 @@ mod tests {
                 LessThan,
                 GreaterThan,
                 Equal,
+                Compose,
+                Curry,
                 Conditional,
             ],
         );

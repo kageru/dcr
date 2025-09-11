@@ -50,10 +50,13 @@ enum V {
     Load,
     // Partial application and function references
     Apply,
+    Curry,
     Fn(Box<V>),
     Fn1(Box<V>, Option<Box<V>>),
     Fn2(Box<V>, Option<Box<V>>, Option<Box<V>>),
     Identifier(String),
+    Compose,
+    Composed(Box<V>, Box<V>),
     // Logic and control flow
     LessThan,
     GreaterThan,

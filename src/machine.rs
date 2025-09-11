@@ -2,7 +2,8 @@ use crate::{Num, Result, V, V::*};
 use std::{collections::HashMap, ops};
 
 const STACK_EMPTY: &str = "not enough elements on the stack";
-const NUM_REGISTERS: usize = 256;
+// Index 256 and above are for internal use.
+const NUM_REGISTERS: usize = 266;
 
 pub struct Machine {
     pub stack: Vec<V>,
@@ -37,58 +38,54 @@ impl Machine {
         self.process2::<false>(v)
     }
 
-    fn try_curry(&mut self) -> Result<V> {
-        match self.popn()? {
-            [Fn1(f, None), v @ Value(_)] => Ok(Fn1(f, Some(Box::new(v)))),
-            [Fn2(f, a1, None), v @ Value(_)] => Ok(Fn2(f, a1, Some(Box::new(v)))),
-            [Fn2(f, None, a2), v @ Value(_)] => Ok(Fn2(f, Some(Box::new(v)), a2)),
-            // Put everything back where it belongs
-            [a, b] => {
-                self.push(a);
-                self.push(b);
-                Err(String::new())
-            }
-        }
-    }
-
     fn process2<const APPLY: bool>(&mut self, v: V) -> Result<()> {
         Ok(match v {
             v @ Value(_) => self.stack.push(v),
             v @ (Fn1(_, _) | Fn2(_, _, _) | Fn(_) | Identifier(_)) if !APPLY => self.stack.push(v),
 
-            Apply => match self.try_curry() {
-                Ok(f) => self.push(f),
-                // The arguments aren’t a value and a partial, so we just try to execute whatever is on the stack
-                Err(_) => {
-                    let next = self.pop()?;
-                    self.process2::<true>(next)?
+            Curry => match self.popn()? {
+                [Fn1(f, None), v] => self.push(Fn1(f, Some(Box::new(v)))),
+                [Fn2(f, a1, None), v] => self.push(Fn2(f, a1, Some(Box::new(v)))),
+                [Fn2(f, None, a2), v] => self.push(Fn2(f, Some(Box::new(v)), a2)),
+                [a, b] => {
+                    let e = format!("Failed to curry {a:?} with {b:?}");
+                    self.push(a);
+                    self.push(b);
+                    return Err(e);
                 }
             },
+            Apply => {
+                let next = self.pop()?;
+                self.process2::<true>(next)?
+            }
             Identifier(ident) => match self.vars.get(&ident).cloned() {
                 Some(v) => self.process2::<true>(v)?,
                 None => return Err(format!("{ident} not found")),
             },
             Fn(o) => self.process(*o)?,
-            // We have to reorder the arguments here because functions are curried starting with the first parameter.
-            // The value on the stack under the reference should therefore be the *last* parameter, after the curried ones.
             Fn1(o, arg) => {
                 if let Some(v) = arg {
-                    let t = self.pop()?;
                     self.push(*v);
-                    self.push(t);
                 }
                 self.process(*o)?;
             }
             Fn2(o, arg1, arg2) => {
-                let t = self.pop()?;
                 if let Some(v) = arg1 {
                     self.push(*v);
                 }
                 if let Some(v) = arg2 {
                     self.push(*v);
                 }
-                self.push(t);
                 self.process(*o)?;
+            }
+            Compose => {
+                let [a, b] = self.popn()?;
+                self.push(Composed(Box::new(a), Box::new(b)));
+            }
+
+            Composed(a, b) => {
+                self.process2::<true>(*b)?;
+                self.process2::<true>(*a)?;
             }
 
             Add => self.binop(ops::Add::add)?,
@@ -189,17 +186,18 @@ mod tests {
     #[test_case("2 0s0l" => vec![Value(2.0)]; "storing a number in a register")]
     #[test_case("10 0s 20 1s c 1l 1l + 0l -" => vec![Value(30.0)])]
     #[test_case(r"1 1 \+ $" => vec![Value(2.0)]; "delayed application")]
-    #[test_case(r"1 \+ 1 1 + $ $" => vec![Value(3.0)]; "partial application")]
-    #[test_case(r"1 \+ 2 $" => vec![Value(1.0), Fn1(Box::new(Add), Some(Box::new(Value(2.0))))])]
+    #[test_case(r"1 \+ 1 1 + @ $" => vec![Value(3.0)]; "partial application")]
+    #[test_case(r"1 \+ 2 @" => vec![Value(1.0), Fn1(Box::new(Add), Some(Box::new(Value(2.0))))])]
     #[test_case(r"1 2 3 4 S0s \+ S2-r 0l /" => vec![Value(2.5)]; "calculate the average using repeat and stack size")]
     #[test_case("2 4 > 2 4 ?" => vec![Value(4.0)]; "max()")]
     #[test_case("2 4 < 2 4 ?" => vec![Value(2.0)]; "min()")]
     #[test_case("2 2 =" => vec![Value(1.0)]; "equality")]
     #[test_case("2 4 =" => vec![Value(0.0)]; "inequality")]
     #[test_case("2 (two) s c (two) l" => vec![Value(2.0)]; "storing a number in a named variable")]
-    #[test_case(r"\- (minus) s c (minus) l" => vec![Fn1(Box::new(Sub), None)]; "storing a function in a named variable")]
+    #[test_case(r"\- (minus) s (minus) l" => vec![Fn1(Box::new(Sub), None)]; "storing a function in a named variable")]
     #[test_case(r"\- (minus) s 2 1 (minus) $" => vec![Value(1.0)]; "applying a function from a named variable")]
-    #[test_case(r"\? 1$ -1$ (positiveIfTrue)sc 5 (positiveIfTrue)$" => vec![Value(1.0)]; "curried ternary operator")]
+    #[test_case(r"\? -1@ 1@ (positiveIfTrue)s 5 (positiveIfTrue)$" => vec![Value(1.0)]; "curried ternary operator")]
+    #[test_case(r"\* 2@ \+ 1@ | (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions")]
     fn evaluation(raw: &str) -> Vec<V> {
         let input = parse(raw).expect("parsing failed").1;
         dbg!(raw, &input);
