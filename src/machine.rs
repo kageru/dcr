@@ -197,8 +197,16 @@ mod tests {
     #[test_case(r"\- (minus) s (minus) l" => vec![Fn1(Box::new(Sub), None)]; "storing a function in a named variable")]
     #[test_case(r"\- (minus) s 2 1 (minus) $" => vec![Value(1.0)]; "applying a function from a named variable")]
     #[test_case(r"\? -1@ 1@ (positiveIfTrue)s 5 (positiveIfTrue)$" => vec![Value(1.0)]; "curried ternary operator")]
-    #[test_case(r"\+ 1@ \* 2@ | (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions")]
+    #[test_case(r"\+1@\*2@| (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions")]
+    #[test_case(r"{ +1*2 } (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions using function mode")]
     #[test_case(r"\s 256@ \s257@ | \l257@ | \l256@ | \< | \l257@ | \l256@ | \? | (min)s 2 4 (min)$ 4 3 (min)$" => vec![Value(2.0), Value(3.0)]; "min() implementation")]
+    #[test_case(r"{ s256 s257 l257 l256 < l257 l256 ? }(min)s  2 4 (min)$ 4 3 (min)$" => vec![Value(2.0), Value(3.0)]; "min() implementation using function mode")]
+    #[test_case(r"{*2}" => vec![Fn1(Box::new(Mul), Some(Box::new(Value(2.0))))]; "curry in function mode")]
+    #[test_case(r"{?\+@\-@}" => vec![
+        Fn2(Box::new(Conditional),
+        Some(Box::new(Fn1(Box::new(Sub), None))),
+        Some(Box::new(Fn1(Box::new(Add), None))),
+    )]; "applying partials in function mode")]
     fn evaluation(raw: &str) -> Vec<V> {
         let input = parse(raw).expect("parsing failed").1;
         dbg!(raw, &input);

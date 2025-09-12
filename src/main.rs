@@ -1,4 +1,3 @@
-#![feature(try_blocks)]
 use machine::Machine;
 use parser::parse;
 use std::io::stdin;
