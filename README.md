@@ -18,7 +18,7 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 - `\x`: Put an `x` on the stack without executing it. `x` has to be a function that takes 1 or more arguments
 - `x $`: pop `x` (a function) and apply it. It may pop any number of arguments it requires
 - `x y @`: curry `x` (a function) with `y` (still looking for a better operator than `@`). Currying starts from the last argument, so the order is consistent with regular application. e.g. `\/ 2 @` creates a partial that will divide its argument by 2.
-- `x y |`: compose two functions, mainly useful when you want to store the result. When applying `a x y | $`, the result is identical to `x a y $ $`, i.e. `x(y(a))`.
+- `x y |`: compose two functions, mainly useful when you want to store the result. When applying `a x y | $`, the result is identical to `y a x $ $`, i.e. `y(x(a))`, so functions are applied left to right.
 
 FAQ (answers to questions that I thought people might ask; the questions can be inferred by the reader):
 - Whitespace is ignored except when it separates 2 numbers.

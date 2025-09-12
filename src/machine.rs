@@ -84,8 +84,8 @@ impl Machine {
             }
 
             Composed(a, b) => {
-                self.process2::<true>(*b)?;
                 self.process2::<true>(*a)?;
+                self.process2::<true>(*b)?;
             }
 
             Add => self.binop(ops::Add::add)?,
@@ -197,7 +197,8 @@ mod tests {
     #[test_case(r"\- (minus) s (minus) l" => vec![Fn1(Box::new(Sub), None)]; "storing a function in a named variable")]
     #[test_case(r"\- (minus) s 2 1 (minus) $" => vec![Value(1.0)]; "applying a function from a named variable")]
     #[test_case(r"\? -1@ 1@ (positiveIfTrue)s 5 (positiveIfTrue)$" => vec![Value(1.0)]; "curried ternary operator")]
-    #[test_case(r"\* 2@ \+ 1@ | (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions")]
+    #[test_case(r"\+ 1@ \* 2@ | (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions")]
+    #[test_case(r"\s 256@ \s257@ | \l257@ | \l256@ | \< | \l257@ | \l256@ | \? | (min)s 2 4 (min)$ 4 3 (min)$" => vec![Value(2.0), Value(3.0)]; "min() implementation")]
     fn evaluation(raw: &str) -> Vec<V> {
         let input = parse(raw).expect("parsing failed").1;
         dbg!(raw, &input);
