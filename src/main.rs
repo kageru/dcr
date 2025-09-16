@@ -4,6 +4,7 @@ use std::io::stdin;
 
 mod machine;
 mod parser;
+mod stdlib;
 
 /// Number type of the machine
 type Num = f64;

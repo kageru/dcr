@@ -1,4 +1,8 @@
-use crate::{Num, Result, V, V::*};
+use crate::{
+    parser::parse,
+    Num, Result,
+    V::{self, *},
+};
 use std::{collections::HashMap, ops};
 
 const STACK_EMPTY: &str = "not enough elements on the stack";
@@ -27,11 +31,17 @@ macro_rules! pop {
 
 impl Machine {
     pub fn new() -> Self {
-        Self {
+        let mut machine = Self {
             stack: Vec::new(),
             registers: [0.0; _],
             vars: HashMap::new(),
+        };
+        for f in crate::stdlib::STDLIB {
+            for v in parse(f).expect("Error while reading stdlib").1 {
+                machine.process(v).expect("Error while reading stdlib");
+            }
         }
+        machine
     }
 
     pub fn process(&mut self, v: V) -> Result<()> {
