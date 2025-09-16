@@ -1,6 +1,6 @@
 use machine::Machine;
 use parser::parse;
-use std::io::stdin;
+use std::{fmt, io::stdin};
 
 mod machine;
 mod parser;
@@ -75,5 +75,35 @@ impl V {
 
     fn int(self) -> Result<usize> {
         Ok(self.number()?.round() as usize)
+    }
+}
+
+impl fmt::Display for V {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use V::*;
+        match self {
+            Add => write!(f, "+"),
+            Sub => write!(f, "-"),
+            Mul => write!(f, "*"),
+            Div => write!(f, "/"),
+            Mod => write!(f, "%"),
+            Value(num) => write!(f, "{num}"),
+            Store => write!(f, "s"),
+            Load => write!(f, "l"),
+            Apply => write!(f, "$"),
+            Fn(fun) => write!(f, "{fun}"),
+            Fn1(fun, None) => write!(f, "{fun}"),
+            Fn1(fun, Some(v)) => write!(f, "{v} {fun}"),
+            Fn2(fun, _, None) => write!(f, "{fun}"),
+            Fn2(fun, None, Some(arg1)) => write!(f, "{arg1} {fun}"),
+            Fn2(fun, Some(arg1), Some(arg2)) => write!(f, "{arg1} {arg2} {fun}"),
+            Identifier(ident) => write!(f, "{ident}"),
+            Composed(a, b) => write!(f, "Composed({a}, {b})"),
+            LessThan => write!(f, "<"),
+            GreaterThan => write!(f, ">"),
+            Equal => write!(f, "="),
+            Conditional => write!(f, "?"),
+            default => write!(f, "{default:?}"),
+        }
     }
 }

@@ -147,8 +147,14 @@ impl Machine {
             }),
             Clear => self.stack.clear(),
 
-            Print => println!("{:?}", self.pop()?),
-            Printall => println!("{:?}", self.stack),
+            Print => println!("{}", self.pop()?),
+            Printall => println!(
+                "{}",
+                self.stack
+                    .iter()
+                    .map(|x| format!("{x} "))
+                    .collect::<String>()
+            ),
             Quit => std::process::exit(0),
         })
     }
