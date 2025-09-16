@@ -37,6 +37,7 @@ enum V {
     Sub,
     Mul,
     Div,
+    Mod,
     // User interaction
     Print,
     Printall,

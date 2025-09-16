@@ -102,6 +102,7 @@ impl Machine {
             Sub => self.binop(ops::Sub::sub)?,
             Mul => self.binop(ops::Mul::mul)?,
             Div => self.binop(ops::Div::div)?,
+            Mod => self.binop(|a, b| a % b)?,
 
             Store => {
                 let [value, addr] = self.popn()?;
@@ -191,6 +192,8 @@ mod tests {
     use test_case::test_case;
 
     #[test_case("1 2+3-" => vec![Value(0.0)])]
+    #[test_case("3 2 %" => vec![Value(1.0)])]
+    #[test_case("1.5 1 %" => vec![Value(0.5)])]
     #[test_case("40 2+6/7*" => vec![Value(49.0)])]
     #[test_case("5 2/3+3" => vec![Value(5.5), Value(3.0)])]
     #[test_case("2 0s0l" => vec![Value(2.0)]; "storing a number in a register")]

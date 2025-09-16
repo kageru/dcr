@@ -3,7 +3,7 @@ Sort of, at least. The goal here isn’t to replace `dc` at all. I just wanted m
 I have some stupid ideas, but we’ll see about those.
 
 Currently implemented (`xyz` are placeholders for popped stack values):
-- `x y +`: pushes `x + y`. `-`, `*`, `/` work the same.
+- `x y +`: pushes `x + y`. `-`, `*`, `/`, `%` (modulo) work the same.
 - `x y <`: pushes `1` if `x < y`, else pushes `0`. `>` and `=` work the same.
 - `x y z ?`: if `x` is a nonzero value, push y, else push z
 - `x p`: print `x`

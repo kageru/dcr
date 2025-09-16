@@ -80,7 +80,7 @@ fn comment(input: &str) -> IResult<&str, &str> {
 
 const OP0: &str = "fcqS";
 const OP1: &str = "p$";
-const OP2: &str = "+-*/slr<>=|@";
+const OP2: &str = "+-*/%slr<>=|@";
 const OP3: &str = "?";
 
 fn op(input: &str) -> IResult<&str, V> {
@@ -126,6 +126,7 @@ fn op2(input: &str) -> IResult<&str, V> {
         '-' => V::Sub,
         '*' => V::Mul,
         '/' => V::Div,
+        '%' => V::Mod,
         's' => V::Store,
         'l' => V::Load,
         'r' => V::Repeat,
@@ -225,6 +226,7 @@ mod tests {
                 Sub,
                 Mul,
                 Div,
+                Mod,
                 Store,
                 Load,
                 Repeat,
