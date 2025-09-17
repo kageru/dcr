@@ -92,12 +92,7 @@ fn partial_op(input: &str) -> IResult<&str, V> {
 }
 
 fn partial_op_inner(input: &str) -> IResult<&str, V> {
-    alt((
-        map(alt((op1, op0)), |o| V::Fn(Box::new(o))),
-        map(op2, |o| V::Fn1(Box::new(o), None)),
-        map(op3, |o| V::Fn2(Box::new(o), None, None)),
-    ))
-    .parse(input)
+    map(op, |o| V::Fun(Box::new(o))).parse(input)
 }
 
 fn op0(input: &str) -> IResult<&str, V> {
@@ -250,22 +245,22 @@ mod tests {
 
     #[test]
     fn partial_parsing() {
-        assert_parses_as("\\++", &[Fn1(Box::new(Add), None), Add]);
-        assert_parses_as("\\-", &[Fn1(Box::new(Sub), None)]);
+        assert_parses_as("\\++", &[Fun(Box::new(Add)), Add]);
+        assert_parses_as("\\-", &[Fun(Box::new(Sub))]);
     }
 
     #[test]
     fn function_mode() {
-        assert_parses_as("{*2", &[Fn1(Box::new(Mul), None), Value(2.0), Curry]);
-        assert_parses_as("{+2}", &[Fn1(Box::new(Add), None), Value(2.0), Curry]);
+        assert_parses_as("{*2", &[Fun(Box::new(Mul)), Value(2.0), Curry]);
+        assert_parses_as("{+2}", &[Fun(Box::new(Add)), Value(2.0), Curry]);
         assert_parses_as(
             "{?+@-@}",
             &[
-                Fn2(Box::new(Conditional), None, None),
-                Fn1(Box::new(Add), None),
+                Fun(Box::new(Conditional)),
+                Fun(Box::new(Add)),
                 Curry,
                 Compose,
-                Fn1(Box::new(Sub), None),
+                Fun(Box::new(Sub)),
                 Curry,
                 Compose,
             ],

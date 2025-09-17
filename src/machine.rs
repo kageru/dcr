@@ -48,21 +48,30 @@ impl Machine {
         self.process2::<false>(v)
     }
 
+    fn uncurry(&mut self, v: V) -> Result<()> {
+        match v {
+            Curried(fun, arg) => {
+                self.push(*arg);
+                self.uncurry(*fun)
+            }
+            v => self.process2::<true>(v),
+        }
+    }
+
     fn process2<const APPLY: bool>(&mut self, v: V) -> Result<()> {
         Ok(match v {
             v @ Value(_) => self.stack.push(v),
-            v @ (Fn1(_, _) | Fn2(_, _, _) | Fn(_) | Identifier(_)) if !APPLY => self.stack.push(v),
+            v @ (Fun(_) | Identifier(_)) if !APPLY => self.stack.push(v),
 
             Curry => {
                 let [a, b] = self.popn()?;
-                match try_curry(a.clone(), b.clone()) {
-                    Ok(v) => self.push(v),
-                    Err(e) => {
-                        self.push(b);
-                        self.push(a);
-                        return Err(e);
-                    }
-                }
+                self.push(Curried(
+                    match a {
+                        Fun(f) => f,
+                        _ => Box::new(a),
+                    },
+                    Box::new(b),
+                ));
             }
             Apply => {
                 let next = self.pop()?;
@@ -72,22 +81,8 @@ impl Machine {
                 Some(v) => self.process2::<true>(v)?,
                 None => return Err(format!("{ident} not found")),
             },
-            Fn(o) => self.process(*o)?,
-            Fn1(o, arg) => {
-                if let Some(v) = arg {
-                    self.push(*v);
-                }
-                self.process(*o)?;
-            }
-            Fn2(o, arg1, arg2) => {
-                if let Some(v) = arg1 {
-                    self.push(*v);
-                }
-                if let Some(v) = arg2 {
-                    self.push(*v);
-                }
-                self.process(*o)?;
-            }
+            Fun(o) => self.process(*o)?,
+            c @ Curried(_, _) => self.uncurry(c)?,
             Compose => {
                 let [a, b] = self.popn()?;
                 self.push(Composed(Box::new(a), Box::new(b)));
@@ -191,16 +186,6 @@ impl Machine {
     }
 }
 
-fn try_curry(a1: V, a2: V) -> Result<V> {
-    match (a1, a2) {
-        (Fn1(f, None), v) => Ok(Fn1(f, Some(Box::new(v)))),
-        (Fn2(f, a1, None), v) => Ok(Fn2(f, a1, Some(Box::new(v)))),
-        (Fn2(f, None, a2), v) => Ok(Fn2(f, Some(Box::new(v)), a2)),
-        (Composed(f1, f2), a1) => Ok(Composed(f1, Box::new(try_curry(*f2, a1)?))),
-        (a, b) => Err(format!("Failed to curry {a:?} with {b:?}")),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,26 +201,30 @@ mod tests {
     #[test_case("10 0s 20 1s c 1l 1l + 0l -" => vec![Value(30.0)])]
     #[test_case(r"1 1 \+ $" => vec![Value(2.0)]; "delayed application")]
     #[test_case(r"1 \+ 1 1 + @ $" => vec![Value(3.0)]; "partial application")]
-    #[test_case(r"1 \+ 2 @" => vec![Value(1.0), Fn1(Box::new(Add), Some(Box::new(Value(2.0))))])]
+    #[test_case(r"1 \+ 2 @" => vec![Value(1.0), Curried(Box::new(Add), Box::new(Value(2.0)))])]
     #[test_case(r"1 2 3 4 S0s \+ S2-r 0l /" => vec![Value(2.5)]; "calculate the average using repeat and stack size")]
     #[test_case("2 4 > 2 4 ?" => vec![Value(4.0)]; "max()")]
     #[test_case("2 4 < 2 4 ?" => vec![Value(2.0)]; "min()")]
     #[test_case("2 2 =" => vec![Value(1.0)]; "equality")]
     #[test_case("2 4 =" => vec![Value(0.0)]; "inequality")]
     #[test_case("2 (two) s c (two) l" => vec![Value(2.0)]; "storing a number in a named variable")]
-    #[test_case(r"\- (minus) s (minus) l" => vec![Fn1(Box::new(Sub), None)]; "storing a function in a named variable")]
+    #[test_case(r"\- (minus) s (minus) l" => vec![Fun(Box::new(Sub))]; "storing a function in a named variable")]
     #[test_case(r"\- (minus) s 2 1 (minus) $" => vec![Value(1.0)]; "applying a function from a named variable")]
     #[test_case(r"\? -1@ 1@ (positiveIfTrue)s 5 (positiveIfTrue)$" => vec![Value(1.0)]; "curried ternary operator")]
     #[test_case(r"\+1@\*2@| (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions")]
     #[test_case(r"{ +1*2 } (plus1Times2)s 4 (plus1Times2)$" => vec![Value(10.0)]; "composed functions using function mode")]
     #[test_case(r"\s 256@ \s257@ | \l257@ | \l256@ | \< | \l257@ | \l256@ | \? | (min)s 2 4 (min)$ 4 3 (min)$" => vec![Value(2.0), Value(3.0)]; "min() implementation")]
     #[test_case(r"{ s256 s257 l257 l256 < l257 l256 ? }(min)s  2 4 (min)$ 4 3 (min)$" => vec![Value(2.0), Value(3.0)]; "min() implementation using function mode")]
-    #[test_case(r"{*2}" => vec![Fn1(Box::new(Mul), Some(Box::new(Value(2.0))))]; "curry in function mode")]
+    #[test_case(r"{*2}" => vec![Curried(Box::new(Mul), Box::new(Value(2.0)))]; "curry in function mode")]
     #[test_case(r"{?\+@\-@}" => vec![
-        Fn2(Box::new(Conditional),
-        Some(Box::new(Fn1(Box::new(Sub), None))),
-        Some(Box::new(Fn1(Box::new(Add), None))),
-    )]; "applying partials in function mode")]
+        Curried(
+            Box::new(Curried(
+                Box::new(Conditional),
+                Box::new(Fun(Box::new(Add))),
+            )),
+            Box::new(Fun(Box::new(Sub))),
+        )
+    ]; "applying partials in function mode")]
     fn evaluation(raw: &str) -> Vec<V> {
         let input = parse(raw).expect("parsing failed").1;
         dbg!(raw, &input);

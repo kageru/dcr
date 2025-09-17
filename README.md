@@ -17,7 +17,7 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 - `x y r`: pop x, then push it `y` times. If `x` is a function, it is instead applied `y` times.
 - `\x`: Put an `x` on the stack without executing it. `x` has to be a function that takes 1 or more arguments
 - `x $`: pop `x` (a function) and apply it. It may pop any number of arguments it requires
-- `x y @`: curry `x` (a function) with `y` (still looking for a better operator than `@`). Currying starts from the last argument, so the order is consistent with regular application. e.g. `\/ 2 @` creates a partial that will divide its argument by 2.
+- `x y @`: curry `x` (a function) with `y` (still looking for a better operator than `@`). Currying starts from the last argument, so the order is consistent with regular application. e.g. `\/ 2 @` creates a partial that will divide its argument by 2. Anything can be curried with anything, and a function can be curried any number of times. Before it is applied, all curried arguments are pushed on the stack in reverse order, i.e. `\+ 2@ 3@ 4@ 5@` will, if applied, push `5 4 3 2` before executing `+`, resulting in a stack of `5 4 5`.
 - `x y |`: compose two functions, mainly useful when you want to store the result. When applying `a x y | $`, the result is identical to `y a x $ $`, i.e. `y(x(a))`, so functions are applied left to right.
 
 ### Function mode
