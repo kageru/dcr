@@ -53,17 +53,17 @@ impl Machine {
             v @ Value(_) => self.stack.push(v),
             v @ (Fn1(_, _) | Fn2(_, _, _) | Fn(_) | Identifier(_)) if !APPLY => self.stack.push(v),
 
-            Curry => match self.popn()? {
-                [Fn1(f, None), v] => self.push(Fn1(f, Some(Box::new(v)))),
-                [Fn2(f, a1, None), v] => self.push(Fn2(f, a1, Some(Box::new(v)))),
-                [Fn2(f, None, a2), v] => self.push(Fn2(f, Some(Box::new(v)), a2)),
-                [a, b] => {
-                    let e = format!("Failed to curry {a:?} with {b:?}");
-                    self.push(a);
-                    self.push(b);
-                    return Err(e);
+            Curry => {
+                let [a, b] = self.popn()?;
+                match try_curry(a.clone(), b.clone()) {
+                    Ok(v) => self.push(v),
+                    Err(e) => {
+                        self.push(b);
+                        self.push(a);
+                        return Err(e);
+                    }
                 }
-            },
+            }
             Apply => {
                 let next = self.pop()?;
                 self.process2::<true>(next)?
@@ -188,6 +188,16 @@ impl Machine {
         self.registers
             .get_mut(i)
             .ok_or_else(|| format!("Register {i} out of range"))
+    }
+}
+
+fn try_curry(a1: V, a2: V) -> Result<V> {
+    match (a1, a2) {
+        (Fn1(f, None), v) => Ok(Fn1(f, Some(Box::new(v)))),
+        (Fn2(f, a1, None), v) => Ok(Fn2(f, a1, Some(Box::new(v)))),
+        (Fn2(f, None, a2), v) => Ok(Fn2(f, Some(Box::new(v)), a2)),
+        (Composed(f1, f2), a1) => Ok(Composed(f1, Box::new(try_curry(*f2, a1)?))),
+        (a, b) => Err(format!("Failed to curry {a:?} with {b:?}")),
     }
 }
 

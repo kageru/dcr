@@ -52,6 +52,7 @@ enum V {
     // Partial application and function references
     Apply,
     Curry,
+    // We could just have nested Curried(Curried(Curried(f, a1), a2), a3)
     Fn(Box<V>),
     Fn1(Box<V>, Option<Box<V>>),
     Fn2(Box<V>, Option<Box<V>>, Option<Box<V>>),
@@ -98,7 +99,7 @@ impl fmt::Display for V {
             Fn2(fun, None, Some(arg1)) => write!(f, "{arg1} {fun}"),
             Fn2(fun, Some(arg1), Some(arg2)) => write!(f, "{arg1} {arg2} {fun}"),
             Identifier(ident) => write!(f, "{ident}"),
-            Composed(a, b) => write!(f, "Composed({a}, {b})"),
+            Composed(a, b) => write!(f, "({a}, {b})"),
             LessThan => write!(f, "<"),
             GreaterThan => write!(f, ">"),
             Equal => write!(f, "="),
