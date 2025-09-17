@@ -1,9 +1,10 @@
-pub const STDLIB: &[&str] = &[MIN, MAX, REDUCE];
+pub const STDLIB: &[&str] = &[MIN, MAX, REDUCE, SUM, AVERAGE];
 
 const MIN: &str = "{ s256 s257 l257 l256 < l257 l256 ? }(min)s";
 const MAX: &str = "{ s256 s257 l257 l256 > l257 l256 ? }(max)s";
 const REDUCE: &str = "{ S - 2 r }(reduce)s";
-// const AVERAGE: &str = "{ S s256 } (reduce)l | { / l256 }";
+const SUM: &str = "(reduce)l \\+@  (sum)s";
+const AVERAGE: &str = r"\S \s 256@ | (sum)l | \l256@ | \/ |(avg)s";
 
 #[cfg(test)]
 mod tests {
@@ -43,5 +44,11 @@ mod tests {
     #[test]
     fn reduce() {
         assert_eq!(expect_single_result("1 2 3 4 5 6 7 8 \\+ (reduce)$"), 36.0);
+    }
+
+    #[test]
+    fn average() {
+        assert_eq!(expect_single_result("1 2 3 4 5 6 7 8 (avg)$"), 4.5);
+        assert_eq!(expect_single_result("1 -1 2 -2 0 0 (avg)$"), 0.0);
     }
 }

@@ -18,7 +18,8 @@ fn main() {
             Ok(("", values)) => {
                 for v in values {
                     if let Err(e) = machine.process(v.clone()) {
-                        eprintln!("Error at {v:?}: {e} (stack was {:?})", machine.stack);
+                        eprintln!("Error at {v}: {e}, stack was:\n");
+                        machine.process(V::Printall).unwrap();
                         break;
                     }
                 }

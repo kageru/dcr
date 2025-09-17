@@ -16,10 +16,10 @@ pub struct Machine {
 }
 
 macro_rules! pop {
-    ($machine:ident, $pattern:pat => $f:expr) => {{
+    ($expects:literal, $machine:ident, $pattern:pat => $f:expr) => {{
         let vals = $machine.popn()?;
         let $pattern = vals else {
-            let e = format!("Expected parameters, got {vals:?}");
+            let e = format!(concat!("Expected ", $expects, ", got {:?}"), vals);
             for val in vals {
                 $machine.push(val);
             }
@@ -66,6 +66,7 @@ impl Machine {
             Curry => {
                 let [a, b] = self.popn()?;
                 self.push(Curried(
+                    // Not necessary, but it removes some nested boxing from the stack
                     match a {
                         Fun(f) => f,
                         _ => Box::new(a),
@@ -128,10 +129,10 @@ impl Machine {
                     self.process2::<true>(v.clone())?;
                 }
             }
-            LessThan => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a < b)))),
-            GreaterThan => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a > b)))),
-            Equal => pop!(self, [Value(a), Value(b)] => self.push(Value(f64::from(a == b)))),
-            Conditional => pop!(self, [Value(condition), a, b] => {
+            LessThan => self.binop(|a, b| f64::from(a < b))?,
+            GreaterThan => self.binop(|a, b| f64::from(a > b))?,
+            Equal => self.binop(|a, b| f64::from(a == b))?,
+            Conditional => pop!("a number and 2 branches", self, [Value(condition), a, b] => {
                 self.push(
                     if condition == 0.0 {
                         b
@@ -155,7 +156,7 @@ impl Machine {
     }
 
     fn binop<F: FnOnce(Num, Num) -> Num>(&mut self, f: F) -> Result<()> {
-        pop!(self, [Value(a), Value(b)] => Ok(self.stack.push(Value(f(a, b)))))
+        pop!("two numbers", self, [Value(a), Value(b)] => Ok(self.stack.push(Value(f(a, b)))))
     }
 
     fn popn<const N: usize>(&mut self) -> Result<[V; N]> {
