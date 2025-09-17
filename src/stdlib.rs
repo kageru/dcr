@@ -1,10 +1,4 @@
-pub const STDLIB: &[&str] = &[MIN, MAX, REDUCE, SUM, AVERAGE];
-
-const MIN: &str = "{ s256 s257 l257 l256 < l257 l256 ? }(min)s";
-const MAX: &str = "{ s256 s257 l257 l256 > l257 l256 ? }(max)s";
-const REDUCE: &str = "{ S - 2 r }(reduce)s";
-const SUM: &str = "(reduce)l \\+@  (sum)s";
-const AVERAGE: &str = r"\S \s 256@ | (sum)l | \l256@ | \/ |(avg)s";
+pub const STDLIB: &str = include_str!("stdlib.dcr");
 
 #[cfg(test)]
 mod tests {

@@ -1,7 +1,7 @@
 use crate::{
-    parser::parse,
     Num, Result,
     V::{self, *},
+    parser::parse,
 };
 use std::{collections::HashMap, ops};
 
@@ -36,9 +36,9 @@ impl Machine {
             registers: [0.0; _],
             vars: HashMap::new(),
         };
-        for f in crate::stdlib::STDLIB {
-            for v in parse(f).expect("Error while reading stdlib").1 {
-                machine.process(v).expect("Error while reading stdlib");
+        for line in crate::stdlib::STDLIB.lines() {
+            for v in parse(line).expect(&format!("Error while reading stdlib: {line}\n")).1 {
+                machine.process(v).expect(&format!("Error while processing stdlib: {line}\n"));
             }
         }
         machine

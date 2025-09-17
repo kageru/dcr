@@ -22,8 +22,6 @@ Currently implemented (`xyz` are placeholders for popped stack values):
 
 ### Function mode
 Expressions within `{}` are in function mode. While in function mode, all operations except curry and compose are lazy, all values will be curried automatically, and all functions are composed, e.g. `f(x) = (x + 1) * 2` could be written as `\+1@\*2@|` normally or `{+1*2}` using function mode. Well-formedness of the braces is not enforced, and function mode is cleared at the end of each line.  
-On a technical level, all functions are replaced with their escaped (e.g. `\+`) counterparts, all numbers are implicitly followed by the curry operator `@`, and all functions after the first 2 are preceded by the compose operator `|`, also, a compose operator is added at the closing `}` it at least 2 functions were called in the block.  
-
 A more realistic and useful example is this implementation of a `min()` function, returning the smaller of 2 numbers:
 ```rs
 # Imperative pseudocode for reference:
@@ -36,6 +34,12 @@ A more realistic and useful example is this implementation of a `min()` function
 \s0@ \s1@ | \l1@ | \l0@ | \< | \l1@ | \l0@ | \? | (min)s
 # Function mode
 { s0 s1 l1 l0 < l1 l0 ? }(min)s
+```
+
+On a technical level, all functions are replaced with their escaped (e.g. `\+`) counterparts, all numbers are implicitly followed by the curry operator `@`, and all functions after the first 2 are preceded by the compose operator `|`, also, a compose operator is added at the closing `}` it at least 2 functions were called in the block.  
+Any identifier is loaded and composed implicitly, as can be seen in this implementation of `average` using an existing `sum` function (reminder: `S` pushes the current size of the stack):
+```rs
+{ S s0 (sum) l0 / }(average)s
 ```
 
 ### FAQ (answers to questions that I thought people might ask; the questions can be inferred by the reader):

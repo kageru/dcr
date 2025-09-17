@@ -1,0 +1,9 @@
+{ s256 s257 l257 l256 < l257 l256 ? }(min)s
+
+{ s256 s257 l257 l256 > l257 l256 ? }(max)s
+
+{ S - 2 r }(reduce)s
+
+(reduce)l \\+@  (sum)s
+
+{ S s256 (sum) l256 / }(avg)s
