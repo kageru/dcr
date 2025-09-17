@@ -15,7 +15,6 @@ pub fn parse(input: &str) -> IResult<&str, Vec<V>> {
     many0(preceded(
         multispace0,
         alt((
-            // These produce output
             map(float, |f| {
                 // While in function mode, automatically curry values.
                 if function_mode.load(Ordering::Relaxed) {
@@ -27,30 +26,31 @@ pub fn parse(input: &str) -> IResult<&str, Vec<V>> {
             map(
                 alt((
                     partial_op,
-                    // if we’re in function mode, all functions except the curry operator should be lazy
                     verify(op, |op| {
+                        // Only allow non-lazy ops outside of function mode
+                        // or for Compose and Curry which are always eager.
                         cannot_be_lazy(op) || !function_mode.load(Ordering::Relaxed)
                     }),
-                    identifier,
+                    verify(identifier, |_| !function_mode.load(Ordering::Relaxed)),
                 )),
                 |o| vec![o],
             ),
-            map(partial_op_inner, |o| {
-                if functions.fetch_add(1, Ordering::Relaxed) <= 1 {
-                    vec![o]
-                } else {
-                    vec![V::Compose, o]
-                }
-            }),
-            map(char('}'), |_| {
-                function_mode.store(false, Ordering::Relaxed);
-                if functions.load(Ordering::Relaxed) >= 2 {
-                    vec![V::Compose]
-                } else {
-                    Vec::new()
-                }
-            }),
-            // This is discarded
+            map(
+                alt((
+                    map(identifier, |ident| vec![ident, V::Load]),
+                    map(partial_op_inner, |o| vec![o]),
+                    map(char('}'), |_| {
+                        function_mode.store(false, Ordering::Relaxed);
+                        Vec::new()
+                    }),
+                )),
+                |mut v| {
+                    if functions.fetch_add(1, Ordering::Relaxed) >= 2 {
+                        v.insert(0, V::Compose);
+                    }
+                    v
+                },
+            ),
             map(char('{'), |_| {
                 function_mode.store(true, Ordering::Relaxed);
                 functions.store(0, Ordering::Relaxed);

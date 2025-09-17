@@ -4,6 +4,6 @@
 
 { S - 2 r }(reduce)s
 
-(reduce)l \\+@  (sum)s
+(reduce)l \+@  (sum)s
 
 { S s256 (sum) l256 / }(avg)s
