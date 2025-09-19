@@ -1,7 +1,7 @@
 use crate::{
+    parser::parse,
     Num, Result,
     V::{self, *},
-    parser::parse,
 };
 use std::{collections::HashMap, ops};
 
@@ -37,8 +37,13 @@ impl Machine {
             vars: HashMap::new(),
         };
         for line in crate::stdlib::STDLIB.lines() {
-            for v in parse(line).expect(&format!("Error while reading stdlib: {line}\n")).1 {
-                machine.process(v).expect(&format!("Error while processing stdlib: {line}\n"));
+            for v in parse(line)
+                .unwrap_or_else(|e| panic!("Error while reading stdlib “{line}”\n{e:?}"))
+                .1
+            {
+                machine
+                    .process(v)
+                    .unwrap_or_else(|e| panic!("Error while processing stdlib “{line}”\n{e:?}"));
             }
         }
         machine
@@ -85,8 +90,18 @@ impl Machine {
             Fun(o) => self.process(*o)?,
             c @ Curried(_, _) => self.uncurry(c)?,
             Compose => {
-                let [a, b] = self.popn()?;
-                self.push(Composed(Box::new(a), Box::new(b)));
+                let [mut a, mut b] = self.popn()?;
+                a = if let Identifier(id) = a {
+                    self.vars[&id].clone()
+                } else {
+                    a
+                };
+                b = if let Identifier(id) = b {
+                    self.vars[&id].clone()
+                } else {
+                    b
+                };
+                self.push(Composed(Box::new(a), Box::new(b)))
             }
 
             Composed(a, b) => {
@@ -120,7 +135,7 @@ impl Machine {
                     let addr = addr.int()?;
                     Value(*self.reg(addr)?)
                 };
-                self.push(v);
+                self.process2::<APPLY>(v)?
             }
             Stacksize => self.stack.push(Value(self.stack.len() as f64)),
             Repeat => {

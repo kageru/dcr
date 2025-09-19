@@ -31,13 +31,12 @@ pub fn parse(input: &str) -> IResult<&str, Vec<V>> {
                         // or for Compose and Curry which are always eager.
                         cannot_be_lazy(op) || !function_mode.load(Ordering::Relaxed)
                     }),
-                    verify(identifier, |_| !function_mode.load(Ordering::Relaxed)),
+                    identifier,
                 )),
                 |o| vec![o],
             ),
             map(
                 alt((
-                    map(identifier, |ident| vec![ident, V::Load]),
                     map(partial_op_inner, |o| vec![o]),
                     map(char('}'), |_| {
                         function_mode.store(false, Ordering::Relaxed);
@@ -153,7 +152,10 @@ fn float(input: &str) -> IResult<&str, f64> {
                 (digit1, opt(char('.')), digit0),
             )),
         )),
-        |s: &str| s.parse().expect(&format!("Failed to parse {s} as float")),
+        |s: &str| {
+            s.parse()
+                .unwrap_or_else(|_| panic!("Failed to parse {s} as float"))
+        },
     )
     .parse(input)
 }

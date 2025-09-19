@@ -4,6 +4,10 @@
 
 { S - 2 r }(reduce)s
 
-(reduce)l \+@  (sum)s
+\l(reduce)@ \+@ (sum)s
 
-{ S s256 (sum) l256 / }(avg)s
+{ S s256 (sum)| l256 / }(avg)s
+
+# 0(_range)s
+# { l258 l259 < l258 l258 1 + s258 (_rangeFn)| (_range) r1 ?}(_range)s
+# (_rangeFn)\s \s259@ | \s258@ | (range)s
